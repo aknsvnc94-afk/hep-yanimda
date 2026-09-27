@@ -1,0 +1,49 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
+  --color-brand-50: #eef6ff;
+  --color-brand-100: #d9eaff;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+  --color-sun-400: #fbbf24;
+}
+
+body {
+  background: #f5f7fb;
+  color: #0f172a;
+}
+
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[15px] font-bold transition
+    disabled:cursor-not-allowed disabled:opacity-60;
+}
+
+@layer components {
+  .card {
+    @apply rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70;
+  }
+  .label {
+    @apply mb-1 block text-sm font-semibold text-slate-700;
+  }
+  .input {
+    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] outline-none transition
+      placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 disabled:bg-slate-100;
+  }
+  .btn-primary {
+    @apply btn bg-brand-600 text-white hover:bg-brand-700 active:scale-[.99];
+  }
+  .btn-ghost {
+    @apply btn text-slate-700 hover:bg-slate-100;
+  }
+  .btn-outline {
+    @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+  }
+  .btn-danger {
+    @apply btn border border-red-200 bg-white text-red-600 hover:bg-red-50;
+  }
+  .link {
+    @apply font-semibold text-brand-600 hover:underline;
+  }
+}
