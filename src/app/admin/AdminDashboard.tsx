@@ -3,6 +3,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/Alert";
+import { StatTile } from "@/components/Game";
+import { Hero } from "@/components/Hero";
 import { createClient } from "@/lib/supabase/client";
 import { trError } from "@/lib/errors";
 import { ROLE_LABEL, schoolLabel, type Profile, type Role, type School } from "@/lib/types";
@@ -55,21 +57,16 @@ export function AdminDashboard({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-extrabold tracking-tight">Yönetim paneli</h1>
-        <p className="mt-1 text-slate-600">Okulları, kullanıcıları ve sınıfları buradan yönetin.</p>
-      </div>
+      <Hero title="Yönetim paneli 🛠️" subtitle="Okulları, kullanıcıları ve sınıfları buradan yönetin." />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {stats.map((s) => (
-          <div key={s.label} className="card p-4">
-            <p className="text-sm font-semibold text-slate-500">{s.label}</p>
-            <p className="mt-1 text-3xl font-extrabold tabular-nums">{s.value}</p>
-          </div>
-        ))}
+        <StatTile icon="🏫" label="Okul" value={stats[0].value} hue="sky" />
+        <StatTile icon="🍎" label="Öğretmen" value={stats[1].value} hue="accent" />
+        <StatTile icon="👨‍👩‍👧" label="Veli" value={stats[2].value} hue="mint" />
+        <StatTile icon="🎒" label="Sınıf" value={stats[3].value} hue="primary" />
       </div>
 
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-slate-200/60 p-1">
+      <div className="flex gap-1 overflow-x-auto rounded-2xl bg-surface-3 p-1">
         {(
           [
             ["users", "Kullanıcılar"],
@@ -80,8 +77,8 @@ export function AdminDashboard({
           <button
             key={k}
             onClick={() => setTab(k)}
-            className={`flex-1 whitespace-nowrap rounded-lg px-4 py-2 text-sm font-bold transition ${
-              tab === k ? "bg-white text-brand-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+            className={`flex-1 whitespace-nowrap rounded-xl px-4 py-2.5 text-sm font-extrabold transition ${
+              tab === k ? "bg-surface text-primary-ink shadow-[0_2px_0_0_var(--color-line)]" : "text-ink-2 hover:text-ink"
             }`}
           >
             {l}
@@ -130,7 +127,7 @@ function UsersTab({
 
   return (
     <section className="card overflow-hidden">
-      <div className="flex flex-col gap-2 border-b border-slate-100 p-4 sm:flex-row">
+      <div className="flex flex-col gap-2 border-b border-line p-4 sm:flex-row">
         <input className="input" placeholder="Ad, mail, öğrenci veya okul ara…" value={q} onChange={(e) => setQ(e.target.value)} />
         <select className="input sm:w-44" value={role} onChange={(e) => setRole(e.target.value as Role | "")}>
           <option value="">Tüm roller</option>
@@ -140,22 +137,22 @@ function UsersTab({
         </select>
       </div>
       {list.length === 0 ? (
-        <p className="p-6 text-center text-slate-500">Kullanıcı bulunamadı.</p>
+        <p className="p-6 text-center text-muted">Kullanıcı bulunamadı.</p>
       ) : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-line">
           {list.map((u) => (
             <li key={u.id} className="flex flex-col gap-3 p-4 lg:flex-row lg:items-center">
               <div className="min-w-0 flex-1">
                 <p className="font-bold">
                   {u.full_name || "(isimsiz)"}
                   {!u.confirmed_at && (
-                    <span className="ml-2 rounded-full bg-amber-100 px-2 py-0.5 text-xs font-bold text-amber-700">
+                    <span className="ml-2 rounded-full bg-sun-soft px-2 py-0.5 text-xs font-bold text-sun-ink">
                       Mail doğrulanmadı
                     </span>
                   )}
                 </p>
-                <p className="truncate text-sm text-slate-500">{u.email}</p>
-                <p className="text-sm text-slate-500">
+                <p className="truncate text-sm text-muted">{u.email}</p>
+                <p className="text-sm text-muted">
                   {schoolLabel(u.school_id ? schoolById.get(u.school_id) : null)}
                   {u.student_name ? ` · Öğrenci: ${u.student_name}` : ""}
                 </p>
@@ -241,11 +238,11 @@ function SchoolsTab({
 
       <section className="card overflow-hidden">
         {schools.length === 0 ? (
-          <p className="p-6 text-center text-slate-500">
+          <p className="p-6 text-center text-muted">
             Henüz okul yok. Kayıt ekranında okul seçilebilmesi için önce okul ekleyin.
           </p>
         ) : (
-          <ul className="divide-y divide-slate-100">
+          <ul className="divide-y divide-line">
             {schools.map((s) => {
               const t = users.filter((u) => u.school_id === s.id && u.role === "teacher").length;
               const p = users.filter((u) => u.school_id === s.id && u.role === "parent").length;
@@ -260,7 +257,7 @@ function SchoolsTab({
                   ) : (
                     <div className="min-w-0 flex-1">
                       <p className="font-bold">{schoolLabel(s)}</p>
-                      <p className="text-sm text-slate-500">
+                      <p className="text-sm text-muted">
                         {t} öğretmen · {p} veli · {c} sınıf
                       </p>
                     </div>
@@ -336,7 +333,7 @@ function ClassesTab({
 
   return (
     <section className="card overflow-hidden">
-      <div className="border-b border-slate-100 p-4">
+      <div className="border-b border-line p-4">
         <select className="input sm:w-80" value={schoolFilter} onChange={(e) => setSchoolFilter(e.target.value)}>
           <option value="">Tüm okullar</option>
           {[...schoolById.values()].map((s) => (
@@ -345,17 +342,17 @@ function ClassesTab({
         </select>
       </div>
       {list.length === 0 ? (
-        <p className="p-6 text-center text-slate-500">Sınıf bulunamadı.</p>
+        <p className="p-6 text-center text-muted">Sınıf bulunamadı.</p>
       ) : (
-        <ul className="divide-y divide-slate-100">
+        <ul className="divide-y divide-line">
           {list.map((c) => (
             <li key={c.id} className="p-4">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
                 <button className="min-w-0 flex-1 text-left" onClick={() => setOpen(open === c.id ? null : c.id)}>
                   <p className="font-bold">
-                    {c.name} <span className="text-sm font-semibold text-slate-400">{open === c.id ? "▲" : "▼"}</span>
+                    {c.name} <span className="text-sm font-semibold text-muted">{open === c.id ? "▲" : "▼"}</span>
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted">
                     {schoolLabel(schoolById.get(c.school_id))} · {c.teacher?.full_name || "—"} ·{" "}
                     {c.class_members.length} öğrenci
                   </p>
@@ -372,11 +369,11 @@ function ClassesTab({
                 </button>
               </div>
               {open === c.id && (
-                <ul className="mt-3 space-y-1 rounded-xl bg-slate-50 p-3 text-sm">
-                  {c.class_members.length === 0 && <li className="text-slate-500">Katılan veli yok.</li>}
+                <ul className="mt-3 space-y-1 rounded-xl bg-surface-2 p-3 text-sm">
+                  {c.class_members.length === 0 && <li className="text-muted">Katılan veli yok.</li>}
                   {c.class_members.map((m) => (
                     <li key={m.id}>
-                      <b>{m.student_name}</b> <span className="text-slate-500">— Veli: {m.parent?.full_name || "—"}</span>
+                      <b>{m.student_name}</b> <span className="text-muted">— Veli: {m.parent?.full_name || "—"}</span>
                     </li>
                   ))}
                 </ul>

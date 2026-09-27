@@ -1,6 +1,7 @@
 "use client";
 import { useMemo, useState } from "react";
 import { RankingChart } from "@/components/RankingChart";
+import { StatTile } from "@/components/Game";
 import { fmtDate, monthRange, todayISO, weekRange } from "@/lib/dates";
 import type { Member, RankRow, Reading } from "@/lib/reading-types";
 
@@ -73,7 +74,7 @@ export function ReportTab({
           {periods.map(([k, l]) => (
             <button key={k} onClick={() => setPeriod(k)}
               className={`rounded-full px-3.5 py-1.5 text-sm font-bold transition ${
-                period === k ? "bg-brand-600 text-white" : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                period === k ? "bg-ink text-surface" : "bg-surface-2 text-ink-2 ring-1 ring-line hover:bg-surface-3"
               }`}>
               {l}
             </button>
@@ -95,47 +96,40 @@ export function ReportTab({
         </div>
       )}
       {period !== "tum" && (
-        <p className="text-sm text-slate-500">{fmtDate(range.from)} – {fmtDate(range.to)} · sadece onaylı kayıtlar</p>
+        <p className="text-sm text-muted">{fmtDate(range.from)} – {fmtDate(range.to)} · sadece onaylı kayıtlar</p>
       )}
 
-      <div className="grid grid-cols-3 gap-3">
-        {[
-          ["Okunan kitap", totalBooks.toLocaleString("tr-TR")],
-          ["Toplam sayfa", totalPages.toLocaleString("tr-TR")],
-          ["Okuyan öğrenci", `${readers} / ${members.length}`],
-        ].map(([l, v]) => (
-          <div key={l} className="rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200 sm:p-4">
-            <p className="text-xs font-semibold text-slate-500 sm:text-sm">{l}</p>
-            <p className="mt-1 text-2xl font-extrabold tabular-nums sm:text-3xl">{v}</p>
-          </div>
-        ))}
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+        <StatTile icon="📚" label="Okunan kitap" value={totalBooks.toLocaleString("tr-TR")} hue="primary" />
+        <StatTile icon="📄" label="Toplam sayfa" value={totalPages.toLocaleString("tr-TR")} hue="sky" />
+        <StatTile icon="🧒" label="Okuyan öğrenci" value={`${readers} / ${members.length}`} hue="mint" />
       </div>
 
       {totalBooks > 0 && (
         <div>
-          <h3 className="mb-3 font-extrabold">Öğrenci sıralaması</h3>
+          <h3 className="mb-3 font-black text-ink">🏆 Öğrenci sıralaması</h3>
           <RankingChart rows={rows.filter((r) => r.book_count > 0)} limit={10} />
         </div>
       )}
 
       <div>
-        <h3 className="mb-3 font-extrabold">Öğrenci bazında detay</h3>
-        <div className="overflow-hidden rounded-xl ring-1 ring-slate-200">
+        <h3 className="mb-3 font-black text-ink">🧾 Öğrenci bazında detay</h3>
+        <div className="overflow-hidden rounded-2xl ring-1 ring-line">
           <table className="w-full text-sm">
-            <thead className="bg-slate-50 text-left text-slate-500">
+            <thead className="bg-surface-2 text-left text-muted">
               <tr>
                 <th className="px-3 py-2 font-semibold">Öğrenci</th>
                 <th className="px-3 py-2 text-right font-semibold">Kitap</th>
                 <th className="px-3 py-2 text-right font-semibold">Sayfa</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
+            <tbody className="divide-y divide-line">
               {rows.map((r) => (
                 <FragmentRow key={r.student_name} row={r} open={open === r.student_name}
                   toggle={() => setOpen(open === r.student_name ? null : r.student_name)} />
               ))}
               {rows.length === 0 && (
-                <tr><td colSpan={3} className="px-3 py-6 text-center text-slate-500">Öğrenci yok.</td></tr>
+                <tr><td colSpan={3} className="px-3 py-6 text-center text-muted">Öğrenci yok.</td></tr>
               )}
             </tbody>
           </table>
@@ -148,9 +142,9 @@ export function ReportTab({
 function FragmentRow({ row, open, toggle }: { row: RankRow & { items: Reading[] }; open: boolean; toggle: () => void }) {
   return (
     <>
-      <tr className={row.book_count ? "cursor-pointer hover:bg-slate-50" : "text-slate-400"} onClick={row.book_count ? toggle : undefined}>
+      <tr className={row.book_count ? "cursor-pointer hover:bg-surface-2" : "text-muted"} onClick={row.book_count ? toggle : undefined}>
         <td className="px-3 py-2.5 font-bold">
-          {row.book_count > 0 && <span className="mr-1 text-xs text-slate-400">{open ? "▼" : "▶"}</span>}
+          {row.book_count > 0 && <span className="mr-1 text-xs text-muted">{open ? "▼" : "▶"}</span>}
           {row.student_name}
         </td>
         <td className="px-3 py-2.5 text-right tabular-nums">{row.book_count}</td>
@@ -158,10 +152,10 @@ function FragmentRow({ row, open, toggle }: { row: RankRow & { items: Reading[] 
       </tr>
       {open && (
         <tr>
-          <td colSpan={3} className="bg-slate-50 px-3 py-2">
+          <td colSpan={3} className="bg-surface-2 px-3 py-2">
             <ul className="space-y-1">
               {row.items.map((r) => (
-                <li key={r.id} className="flex justify-between gap-3 text-slate-600">
+                <li key={r.id} className="flex justify-between gap-3 text-ink-2">
                   <span className="truncate">📖 {r.book?.title} ({r.book?.page_count} sf)</span>
                   <span className="shrink-0 tabular-nums">{fmtDate(r.read_date)}</span>
                 </li>

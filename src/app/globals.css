@@ -1,49 +1,200 @@
 @import "tailwindcss";
 
+/* =====================================================================
+   HEP YANIMDA — Tasarım sistemi
+   Renkler CSS değişkeni olarak tanımlı; karanlık modda aynı isimler
+   koyu değerlerle yeniden tanımlanır (telefonun temasına göre otomatik).
+   ===================================================================== */
+
 @theme {
   --font-sans: "Nunito Variable", ui-sans-serif, system-ui, sans-serif;
-  --color-brand-50: #eef6ff;
-  --color-brand-100: #d9eaff;
-  --color-brand-500: #3b82f6;
-  --color-brand-600: #2563eb;
-  --color-brand-700: #1d4ed8;
-  --color-sun-400: #fbbf24;
+
+  /* Yüzeyler ve yazı */
+  --color-bg: #f5f3ff;
+  --color-surface: #ffffff;
+  --color-surface-2: #f5f3fc;
+  --color-surface-3: #ebe8f7;
+  --color-line: #e3dff2;
+  --color-ink: #1b1640;
+  --color-ink-2: #4a4568;
+  --color-muted: #7a7696;
+
+  /* Ana renk: mor */
+  --color-primary: #6c47ff;
+  --color-primary-600: #5b36f2;
+  --color-primary-700: #4424cc;
+  --color-primary-soft: #ede8ff;
+  --color-primary-ink: #4a2bd6;
+
+  /* Vurgu renkleri */
+  --color-accent: #ff6b4a;
+  --color-accent-700: #d94e2e;
+  --color-accent-soft: #ffe9e2;
+  --color-accent-ink: #b8401f;
+
+  --color-sun: #ffc233;
+  --color-sun-700: #d99a00;
+  --color-sun-soft: #fff4d4;
+  --color-sun-ink: #875a00;
+
+  --color-mint: #14c080;
+  --color-mint-700: #0c9a64;
+  --color-mint-soft: #dcf7ea;
+  --color-mint-ink: #0a7a50;
+
+  --color-sky: #2fa8ff;
+  --color-sky-700: #1580d6;
+  --color-sky-soft: #def1ff;
+  --color-sky-ink: #0d67b0;
+
+  --color-danger: #ef4444;
+  --color-danger-soft: #fde7e7;
+  --color-danger-ink: #c02626;
+
+  --animate-pop: pop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  --animate-float: float 5s ease-in-out infinite;
+  --animate-rise: rise 0.45s ease-out both;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #0e0b22;
+    --color-surface: #19153a;
+    --color-surface-2: #211c46;
+    --color-surface-3: #2a2454;
+    --color-line: #332c62;
+    --color-ink: #f4f2ff;
+    --color-ink-2: #cbc6ea;
+    --color-muted: #938db8;
+
+    --color-primary: #8566ff;
+    --color-primary-600: #7552ff;
+    --color-primary-700: #4f30d9;
+    --color-primary-soft: #2a215f;
+    --color-primary-ink: #c3b4ff;
+
+    --color-accent: #ff7d5e;
+    --color-accent-700: #d9573a;
+    --color-accent-soft: #3d201b;
+    --color-accent-ink: #ffb7a5;
+
+    --color-sun: #ffcb4d;
+    --color-sun-700: #c99200;
+    --color-sun-soft: #372b0f;
+    --color-sun-ink: #ffd97a;
+
+    --color-mint: #2fdc98;
+    --color-mint-700: #139a66;
+    --color-mint-soft: #0e3325;
+    --color-mint-ink: #7ceec0;
+
+    --color-sky: #4cb8ff;
+    --color-sky-700: #1d86d4;
+    --color-sky-soft: #0f2a40;
+    --color-sky-ink: #9dd7ff;
+
+    --color-danger: #f87171;
+    --color-danger-soft: #3a1619;
+    --color-danger-ink: #fca5a5;
+  }
+}
+
+html {
+  color-scheme: light dark;
+  -webkit-tap-highlight-color: transparent;
 }
 
 body {
-  background: #f5f7fb;
-  color: #0f172a;
+  background: var(--color-bg);
+  color: var(--color-ink);
+}
+
+/* Form elemanlarının takvim/ok simgeleri karanlık modda da görünsün */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.5);
 }
 
 @utility btn {
-  @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-[15px] font-bold transition
-    disabled:cursor-not-allowed disabled:opacity-60;
+  @apply inline-flex select-none items-center justify-center gap-2 rounded-2xl px-4 py-2.5 text-[15px] font-extrabold transition
+    active:translate-y-[2px] disabled:cursor-not-allowed disabled:opacity-50 disabled:active:translate-y-0;
 }
 
 @layer components {
   .card {
-    @apply rounded-2xl bg-white shadow-sm ring-1 ring-slate-200/70;
+    @apply rounded-3xl bg-surface shadow-[0_2px_0_0_var(--color-line),0_8px_24px_-12px_rgb(40_20_120/0.18)] ring-1 ring-line;
   }
   .label {
-    @apply mb-1 block text-sm font-semibold text-slate-700;
+    @apply mb-1.5 block text-sm font-bold text-ink-2;
   }
   .input {
-    @apply w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-[15px] outline-none transition
-      placeholder:text-slate-400 focus:border-brand-500 focus:ring-4 focus:ring-brand-100 disabled:bg-slate-100;
+    @apply w-full rounded-2xl border-2 border-line bg-surface px-4 py-2.5 text-[15px] text-ink outline-none transition
+      placeholder:text-muted focus:border-primary focus:ring-4 focus:ring-primary-soft disabled:opacity-60;
   }
+  /* 3D "basılabilir" butonlar */
   .btn-primary {
-    @apply btn bg-brand-600 text-white hover:bg-brand-700 active:scale-[.99];
+    @apply btn bg-primary text-white shadow-[0_4px_0_0_var(--color-primary-700)] hover:bg-primary-600
+      active:shadow-[0_2px_0_0_var(--color-primary-700)] disabled:shadow-[0_4px_0_0_var(--color-primary-700)];
   }
-  .btn-ghost {
-    @apply btn text-slate-700 hover:bg-slate-100;
+  .btn-accent {
+    @apply btn bg-accent text-white shadow-[0_4px_0_0_var(--color-accent-700)] hover:brightness-105
+      active:shadow-[0_2px_0_0_var(--color-accent-700)];
+  }
+  .btn-mint {
+    @apply btn bg-mint text-white shadow-[0_4px_0_0_var(--color-mint-700)] hover:brightness-105
+      active:shadow-[0_2px_0_0_var(--color-mint-700)];
   }
   .btn-outline {
-    @apply btn border border-slate-300 bg-white text-slate-700 hover:bg-slate-50;
+    @apply btn border-2 border-line bg-surface text-ink-2 shadow-[0_3px_0_0_var(--color-line)] hover:bg-surface-2
+      active:shadow-[0_1px_0_0_var(--color-line)];
+  }
+  .btn-ghost {
+    @apply btn text-ink-2 hover:bg-surface-3 active:translate-y-0;
   }
   .btn-danger {
-    @apply btn border border-red-200 bg-white text-red-600 hover:bg-red-50;
+    @apply btn border-2 border-danger/30 bg-surface text-danger-ink shadow-[0_3px_0_0_color-mix(in_oklab,var(--color-danger)_30%,transparent)]
+      hover:bg-danger-soft active:shadow-none;
   }
   .link {
-    @apply font-semibold text-brand-600 hover:underline;
+    @apply font-extrabold text-primary-ink hover:underline;
   }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-extrabold;
+  }
+}
+
+/* ---------- Animasyonlar ---------- */
+@keyframes pop {
+  from { transform: scale(0.6); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0) rotate(var(--r, 0deg)); }
+  50% { transform: translateY(-10px) rotate(var(--r, 0deg)); }
+}
+@keyframes rise {
+  from { transform: translateY(10px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+@keyframes confetti-fall {
+  0% { transform: translate3d(0, -10vh, 0) rotate(0deg); opacity: 1; }
+  100% { transform: translate3d(var(--dx), 105vh, 0) rotate(var(--rot)); opacity: 0.9; }
+}
+.confetti-piece {
+  position: fixed;
+  top: 0;
+  z-index: 100;
+  width: 9px;
+  height: 14px;
+  border-radius: 2px;
+  pointer-events: none;
+  animation: confetti-fall var(--dur) cubic-bezier(0.25, 0.6, 0.4, 1) forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+  .confetti-piece { display: none; }
 }

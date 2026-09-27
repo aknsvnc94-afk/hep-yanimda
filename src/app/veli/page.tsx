@@ -1,12 +1,13 @@
 import { AppShell } from "@/components/AppShell";
 import { requireRole } from "@/lib/auth";
 import { schoolLabel } from "@/lib/types";
+import type { Reading } from "@/lib/reading-types";
 import { ParentDashboard, type SchoolClass, type Membership } from "./ParentDashboard";
 
 export default async function ParentPage() {
   const { supabase, profile } = await requireRole("parent");
 
-  const [{ data: school }, { data: classes }, { data: memberships }] = await Promise.all([
+  const [{ data: school }, { data: classes }, { data: memberships }, { data: readings }] = await Promise.all([
     supabase.from("schools").select("name,city").eq("id", profile.school_id!).maybeSingle(),
     supabase
       .from("classes")
@@ -17,6 +18,12 @@ export default async function ParentPage() {
       .from("class_members")
       .select("id,class_id,student_name")
       .eq("parent_id", profile.id),
+    supabase
+      .from("readings")
+      .select("id,book_id,member_id,student_name,read_date,status,created_at, book:books(title,page_count)")
+      .eq("parent_id", profile.id)
+      .order("read_date", { ascending: false })
+      .order("created_at", { ascending: false }),
   ]);
 
   return (
@@ -27,6 +34,7 @@ export default async function ParentPage() {
         studentName={profile.student_name ?? ""}
         classes={(classes ?? []) as unknown as SchoolClass[]}
         memberships={(memberships ?? []) as Membership[]}
+        readings={(readings ?? []) as unknown as Reading[]}
       />
     </AppShell>
   );

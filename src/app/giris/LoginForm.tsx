@@ -39,8 +39,8 @@ export function LoginForm({ notice }: { notice?: string }) {
 
   return (
     <AuthShell
-      title="Giriş yap"
-      subtitle="Mail adresiniz ve şifrenizle devam edin."
+      title="Tekrar hoş geldin! 📖"
+      subtitle="Mail adresin ve şifrenle devam et."
       footer={
         <>
           Hesabınız yok mu?{" "}
@@ -61,7 +61,7 @@ export function LoginForm({ notice }: { notice?: string }) {
         <div>
           <div className="flex items-center justify-between">
             <label className="label" htmlFor="password">Şifre</label>
-            <Link href="/sifremi-unuttum" className="mb-1 text-sm font-semibold text-brand-600 hover:underline">
+            <Link href="/sifremi-unuttum" className="mb-1.5 text-sm font-extrabold text-primary-ink hover:underline">
               Şifremi unuttum
             </Link>
           </div>

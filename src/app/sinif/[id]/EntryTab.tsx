@@ -3,14 +3,15 @@ import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/Alert";
 import { createClient } from "@/lib/supabase/client";
+import { confetti } from "@/lib/confetti";
 import { trError } from "@/lib/errors";
 import { fmtDate, todayISO } from "@/lib/dates";
 import { STATUS_LABEL, type Book, type Member, type Reading, type ReadingStatus } from "@/lib/reading-types";
 
 const STATUS_STYLE: Record<ReadingStatus, string> = {
-  pending: "bg-amber-100 text-amber-800",
-  approved: "bg-emerald-100 text-emerald-800",
-  rejected: "bg-red-100 text-red-700",
+  pending: "bg-sun-soft text-sun-ink",
+  approved: "bg-mint-soft text-mint-ink",
+  rejected: "bg-danger-soft text-danger-ink",
 };
 
 export function EntryTab({
@@ -64,6 +65,7 @@ export function EntryTab({
         ? `${selectedName} — "${book}" kaydedildi.`
         : `${selectedName} — "${book}" kaydedildi. Öğretmen onayından sonra raporlara eklenecek.`,
     );
+    confetti(isStaff ? 40 : 80);
     setBookId(""); setQ("");
     if (members.length > 1) setMemberId("");
     router.refresh();
@@ -76,6 +78,7 @@ export function EntryTab({
     setBusy(null);
     if (error) return setError(trError(error));
     setOk(status === "approved" ? `${ids.length} kayıt onaylandı.` : "Kayıt reddedildi.");
+    if (status === "approved") confetti(40);
     router.refresh();
   }
 
@@ -89,7 +92,7 @@ export function EntryTab({
 
   if (members.length === 0) {
     return (
-      <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+      <p className="rounded-2xl border border-dashed border-line p-6 text-center text-sm text-muted">
         Sınıfta henüz öğrenci yok. Veliler sınıfa katıldığında öğrenciler burada listelenecek.
       </p>
     );
@@ -98,12 +101,12 @@ export function EntryTab({
   return (
     <div className="space-y-6">
       {books.length === 0 ? (
-        <div className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-600">
+        <div className="rounded-2xl border border-dashed border-line p-6 text-center text-sm text-ink-2">
           Kitaplık boş. Önce{" "}
           <button className="link" onClick={goToBooks}>Kitap Ekleme</button> sekmesinden kitap ekleyin.
         </div>
       ) : (
-        <form onSubmit={save} className="space-y-4 rounded-xl bg-slate-50 p-4">
+        <form onSubmit={save} className="space-y-4 rounded-2xl bg-surface-2 p-4 ring-1 ring-line">
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <label className="label" htmlFor="student">Öğrenci</label>
@@ -115,7 +118,7 @@ export function EntryTab({
                   ))}
                 </select>
               ) : members.length === 1 ? (
-                <div className="input bg-white font-bold">{members[0].student_name}</div>
+                <div className="input bg-surface font-bold">{members[0].student_name}</div>
               ) : (
                 <select id="student" className="input" value={memberId} onChange={(e) => setMemberId(e.target.value)} required>
                   <option value="">Öğrenci seçin</option>
@@ -141,15 +144,15 @@ export function EntryTab({
             </div>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-slate-500">
-              Tarih: <b className="text-slate-700">{fmtDate(todayISO())}</b> (cihazınızın tarihi)
+            <p className="text-sm text-muted">
+              Tarih: <b className="text-ink-2">{fmtDate(todayISO())}</b> (cihazınızın tarihi)
             </p>
-            <button className="btn-primary sm:w-40" disabled={busy === "save" || !memberId || !bookId}>
-              {busy === "save" ? "Kaydediliyor…" : "Kaydet"}
+            <button className="btn-accent sm:w-44" disabled={busy === "save" || !memberId || !bookId}>
+              {busy === "save" ? "Kaydediliyor…" : "📖 Kaydet"}
             </button>
           </div>
           {!isStaff && (
-            <p className="text-xs text-slate-500">Veli kayıtları öğretmen onayından sonra raporlara ve sıralamaya dahil edilir.</p>
+            <p className="text-xs text-muted">Veli kayıtları öğretmen onayından sonra raporlara ve sıralamaya dahil edilir.</p>
           )}
         </form>
       )}
@@ -160,31 +163,31 @@ export function EntryTab({
       {isStaff && (
         <div>
           <div className="mb-3 flex items-center justify-between gap-3">
-            <h3 className="font-extrabold">
-              Onay bekleyen veli kayıtları <span className="text-slate-400">({pending.length})</span>
+            <h3 className="font-black text-ink">
+              Onay bekleyen veli kayıtları <span className="text-muted">({pending.length})</span>
             </h3>
             {pending.length > 1 && (
-              <button className="btn-primary px-3 py-1.5 text-sm" disabled={busy === "all"}
+              <button className="btn-mint px-3 py-1.5 text-sm" disabled={busy === "all"}
                 onClick={() => setStatus(pending.map((p) => p.id), "approved")}>
                 Tümünü onayla
               </button>
             )}
           </div>
           {pending.length === 0 ? (
-            <p className="rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-500">Onay bekleyen kayıt yok.</p>
+            <p className="rounded-2xl bg-surface-2 p-4 text-center text-sm text-muted">Onay bekleyen kayıt yok.</p>
           ) : (
-            <ul className="divide-y divide-slate-100 rounded-xl ring-1 ring-amber-200">
+            <ul className="divide-y divide-line overflow-hidden rounded-2xl ring-1 ring-sun/50">
               {pending.map((r) => (
-                <li key={r.id} className="flex flex-col gap-2 bg-amber-50/40 p-3 sm:flex-row sm:items-center">
+                <li key={r.id} className="flex flex-col gap-2 bg-sun-soft p-3 sm:flex-row sm:items-center">
                   <div className="min-w-0 flex-1">
                     <p className="font-bold">{r.student_name}</p>
-                    <p className="truncate text-sm text-slate-600">
+                    <p className="truncate text-sm text-ink-2">
                       {r.book?.title} · {r.book?.page_count} sf · {fmtDate(r.read_date)}
                     </p>
                   </div>
                   <div className="flex gap-2">
-                    <button className="btn-primary px-3 py-1.5 text-sm" disabled={busy === r.id}
-                      onClick={() => setStatus([r.id], "approved")}>Onayla</button>
+                    <button className="btn-mint px-3 py-1.5 text-sm" disabled={busy === r.id}
+                      onClick={() => setStatus([r.id], "approved")}>✓ Onayla</button>
                     <button className="btn-danger px-3 py-1.5 text-sm" disabled={busy === r.id}
                       onClick={() => setStatus([r.id], "rejected")}>Reddet</button>
                   </div>
@@ -196,11 +199,11 @@ export function EntryTab({
       )}
 
       <div>
-        <h3 className="mb-3 font-extrabold">{isStaff ? "Son kayıtlar" : "Kayıtlarım"}</h3>
+        <h3 className="mb-3 font-black text-ink">{isStaff ? "Son kayıtlar" : "Kayıtlarım"}</h3>
         {history.length === 0 ? (
-          <p className="rounded-xl bg-slate-50 p-4 text-center text-sm text-slate-500">Henüz kayıt yok.</p>
+          <p className="rounded-2xl bg-surface-2 p-4 text-center text-sm text-muted">Henüz kayıt yok.</p>
         ) : (
-          <ul className="divide-y divide-slate-100 rounded-xl ring-1 ring-slate-200">
+          <ul className="divide-y divide-line overflow-hidden rounded-2xl ring-1 ring-line">
             {history.map((r) => (
               <li key={r.id} className="flex items-center gap-3 p-3">
                 <div className="min-w-0 flex-1">
@@ -208,15 +211,15 @@ export function EntryTab({
                     {isStaff && <span>{r.student_name} · </span>}
                     {r.book?.title}
                   </p>
-                  <p className="text-sm text-slate-500">
+                  <p className="text-sm text-muted">
                     {r.book?.page_count} sf · {fmtDate(r.read_date)}
                   </p>
                 </div>
-                <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-bold ${STATUS_STYLE[r.status]}`}>
+                <span className={`shrink-0 chip ${STATUS_STYLE[r.status]}`}>
                   {STATUS_LABEL[r.status]}
                 </span>
                 {(isStaff || r.status !== "approved") && (
-                  <button className="btn-ghost shrink-0 px-2 py-1 text-xs text-red-600" onClick={() => remove(r)}>Sil</button>
+                  <button className="btn-ghost shrink-0 px-2 py-1 text-xs text-danger-ink" onClick={() => remove(r)}>Sil</button>
                 )}
               </li>
             ))}

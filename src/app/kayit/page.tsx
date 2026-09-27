@@ -75,8 +75,8 @@ export default function RegisterPage() {
 
   return (
     <AuthShell
-      title="Kayıt ol"
-      subtitle="Bilgilerinizi girerek hesabınızı oluşturun."
+      title="Aramıza katıl 👋"
+      subtitle="Bilgilerinizi girin, hemen başlayın."
       footer={
         <>
           Zaten hesabınız var mı?{" "}
@@ -85,19 +85,26 @@ export default function RegisterPage() {
       }
     >
       <form onSubmit={onSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-2 rounded-xl bg-slate-100 p-1" role="tablist">
-          {(["parent", "teacher"] as Kind[]).map((k) => (
+        <div className="grid grid-cols-2 gap-3" role="tablist">
+          {([
+            ["parent", "👨‍👩‍👧", "Veliyim", "Öğrencimi takip edeceğim"],
+            ["teacher", "🍎", "Öğretmenim", "Sınıfımı yöneteceğim"],
+          ] as [Kind, string, string, string][]).map(([k, icon, label, desc]) => (
             <button
               key={k}
               type="button"
               role="tab"
               aria-selected={kind === k}
               onClick={() => setKind(k)}
-              className={`rounded-lg py-2 text-sm font-bold transition ${
-                kind === k ? "bg-white text-brand-700 shadow-sm" : "text-slate-600 hover:text-slate-900"
+              className={`flex flex-col items-center gap-1 rounded-2xl border-2 p-3 text-center transition active:translate-y-[2px] ${
+                kind === k
+                  ? "border-primary bg-primary-soft shadow-[0_3px_0_0_var(--color-primary)]"
+                  : "border-line bg-surface shadow-[0_3px_0_0_var(--color-line)] hover:bg-surface-2"
               }`}
             >
-              {k === "parent" ? "Veliyim" : "Öğretmenim"}
+              <span className={`text-3xl ${kind === k ? "animate-pop" : ""}`} aria-hidden>{icon}</span>
+              <span className={`font-black ${kind === k ? "text-primary-ink" : "text-ink"}`}>{label}</span>
+              <span className="text-[11px] font-semibold leading-tight text-muted">{desc}</span>
             </button>
           ))}
         </div>
@@ -124,7 +131,7 @@ export default function RegisterPage() {
             ))}
           </select>
           {schools && schools.length === 0 && (
-            <p className="mt-1 text-xs text-slate-500">Henüz okul eklenmemiş. Lütfen yöneticinizle iletişime geçin.</p>
+            <p className="mt-1 text-xs text-muted">Henüz okul eklenmemiş. Lütfen yöneticinizle iletişime geçin.</p>
           )}
         </div>
         {kind === "parent" && (
@@ -147,7 +154,7 @@ export default function RegisterPage() {
           </div>
         </div>
         <button className="btn-primary w-full" disabled={loading}>
-          {loading ? "Kaydediliyor…" : "Kayıt ol"}
+          {loading ? "Kaydediliyor…" : "Hadi başlayalım 🚀"}
         </button>
       </form>
     </AuthShell>

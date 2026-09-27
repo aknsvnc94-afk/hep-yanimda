@@ -57,7 +57,7 @@ export function VerifyForm({ email }: { email: string }) {
         <div>
           <label className="label">Doğrulama kodu</label>
           <CodeInput value={code} onChange={setCode} />
-          <p className="mt-1.5 text-xs text-slate-500">Mail gelmediyse gereksiz (spam) klasörünü kontrol edin.</p>
+          <p className="mt-1.5 text-xs text-muted">Mail gelmediyse gereksiz (spam) klasörünü kontrol edin.</p>
         </div>
         <button className="btn-primary w-full" disabled={loading || code.length < 6}>
           {loading ? "Doğrulanıyor…" : "Kaydı tamamla"}

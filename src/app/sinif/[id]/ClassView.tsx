@@ -1,5 +1,6 @@
 "use client";
 import Link from "next/link";
+import { HUE_CLASSES, hueFor } from "@/lib/game";
 import { useState } from "react";
 import { Tabs } from "@/components/Tabs";
 import type { Book, Member, Reading } from "@/lib/reading-types";
@@ -46,29 +47,30 @@ export function ClassView(props: {
 
   const mainTabs = isStaff
     ? [
-        { key: "ogrenciler" as Main, label: `Öğrenciler (${props.members.length})` },
-        { key: "kitap" as Main, label: "📚 Kitap Takip", badge: pending },
+        { key: "ogrenciler" as Main, label: `Öğrenciler (${props.members.length})`, icon: "🧒" },
+        { key: "kitap" as Main, label: "Kitap Takip", icon: "📚", badge: pending },
       ]
     : [
-        { key: "sinif" as Main, label: "Sınıf" },
-        { key: "kitap" as Main, label: "📚 Kitap Takip" },
+        { key: "sinif" as Main, label: "Sınıf", icon: "🎒" },
+        { key: "kitap" as Main, label: "Kitap Takip", icon: "📚" },
       ];
 
   const subTabs = [
-    { key: "kitaplar" as Sub, label: "Kitap Ekleme" },
-    { key: "giris" as Sub, label: "Öğrenci Kitap Girişi", badge: isStaff ? pending : 0 },
-    ...(isStaff ? [{ key: "rapor" as Sub, label: "Raporlama" }] : []),
+    { key: "kitaplar" as Sub, label: "Kitap Ekleme", icon: "➕" },
+    { key: "giris" as Sub, label: "Öğrenci Kitap Girişi", icon: "✍️", badge: isStaff ? pending : 0 },
+    ...(isStaff ? [{ key: "rapor" as Sub, label: "Raporlama", icon: "📊" }] : []),
   ];
 
   return (
     <div className="space-y-5">
-      <div>
-        <Link href={props.backHref} className="text-sm font-semibold text-slate-500 hover:text-slate-800">
+      <section className={`relative overflow-hidden rounded-3xl bg-gradient-to-br p-5 text-white sm:p-6 ${HUE_CLASSES[hueFor(props.className)].grad} ${HUE_CLASSES[hueFor(props.className)].shadow}`}>
+        <span className="pointer-events-none absolute -right-3 -top-4 text-8xl opacity-20" aria-hidden>📚</span>
+        <Link href={props.backHref} className="relative text-sm font-extrabold text-white/85 hover:text-white">
           ← Ana sayfa
         </Link>
-        <h1 className="mt-1 text-2xl font-extrabold tracking-tight">{props.className}</h1>
-        <p className="text-sm text-slate-600">Öğretmen: {props.teacherName || "—"}</p>
-      </div>
+        <h1 className="relative mt-1 text-3xl font-black tracking-tight sm:text-4xl">{props.className}</h1>
+        <p className="relative text-sm font-bold text-white/90">🍎 {props.teacherName || "—"}</p>
+      </section>
 
       <Tabs items={mainTabs} value={main} onChange={(k) => { setMain(k); setUrl(k, sub); }} />
 
@@ -76,9 +78,9 @@ export function ClassView(props: {
 
       {main === "sinif" && !isStaff && (
         <section className="card space-y-2 p-5">
-          <p className="text-sm text-slate-500">Öğrenciniz</p>
-          <p className="text-xl font-extrabold">{props.members.map((m) => m.student_name).join(", ")}</p>
-          <p className="text-sm text-slate-600">
+          <p className="text-sm font-bold text-muted">Öğrenciniz</p>
+          <p className="text-2xl font-black text-ink">{props.members.map((m) => m.student_name).join(", ")}</p>
+          <p className="text-sm text-ink-2">
             Bu sınıfa kayıtlı. Okuduğu kitapları <b>Kitap Takip</b> sekmesinden girebilirsiniz; öğretmen
             onayladıktan sonra raporlara ve sıralamaya eklenir.
           </p>

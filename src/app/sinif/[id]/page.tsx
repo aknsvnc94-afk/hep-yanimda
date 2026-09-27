@@ -50,6 +50,7 @@ export default async function ClassPage({
   return (
     <AppShell profile={profile} schoolName={schoolLabel(school)}>
       <ClassView
+        key={`${sp.sekme ?? ""}-${sp.alt ?? ""}`}
         classId={cls.id}
         className={cls.name}
         teacherName={teacher?.full_name ?? ""}

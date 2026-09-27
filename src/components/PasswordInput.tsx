@@ -9,7 +9,7 @@ export function PasswordInput(props: React.InputHTMLAttributes<HTMLInputElement>
       <button
         type="button"
         onClick={() => setShow((s) => !s)}
-        className="absolute inset-y-0 right-2 my-auto h-8 rounded-lg px-2 text-xs font-bold text-slate-500 hover:bg-slate-100"
+        className="absolute inset-y-0 right-2 my-auto h-8 rounded-lg px-2 text-xs font-bold text-muted hover:bg-surface-3"
       >
         {show ? "Gizle" : "Göster"}
       </button>
