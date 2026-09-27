@@ -13,6 +13,8 @@ export function trError(err: unknown): string {
     return "Bu mail adresiyle zaten bir hesap var.";
   if (code === "otp_expired" || (m.includes("token") && (m.includes("expired") || m.includes("invalid"))))
     return "Kod hatalı veya süresi dolmuş.";
+  if (code === "email_provider_disabled" || code === "signup_disabled" || m.includes("signups") && m.includes("disabled"))
+    return "Yeni kayıtlar şu anda kapalı. Lütfen yöneticiyle iletişime geçin.";
   if (code === "weak_password" || m.includes("password should"))
     return "Şifre en az 6 karakter olmalı.";
   if (code === "same_password" || m.includes("different from the old"))
@@ -27,6 +29,11 @@ export function trError(err: unknown): string {
     return "Bu isimde bir sınıfınız zaten var.";
   if (m.includes("duplicate key") && m.includes("schools_name_city_unique"))
     return "Bu okul zaten ekli.";
+  if (m.includes("books_class_title_unique")) return "Bu kitap kitaplıkta zaten var.";
+  if (m.includes("readings_student_book_unique")) return "Bu öğrenci bu kitabı zaten kaydetmiş.";
+  if (m.includes("readings_book_id_fkey"))
+    return "Bu kitap okuma kayıtlarında kullanıldığı için silinemez.";
+  if (m.includes("books_page_count_check")) return "Sayfa sayısı 1 ile 5000 arasında olmalı.";
   if (m.includes("row-level security")) return "Bu işlem için yetkiniz yok.";
   if (m.includes("failed to fetch") || m.includes("network"))
     return "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.";

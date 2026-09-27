@@ -1,6 +1,10 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { ChampionCard } from "@/components/RankingChart";
+import { monthName, monthRange, weekRange, fmtDate } from "@/lib/dates";
+import type { RankRow } from "@/lib/reading-types";
 import { Alert } from "@/components/Alert";
 import { createClient } from "@/lib/supabase/client";
 import { trError } from "@/lib/errors";
@@ -28,6 +32,25 @@ export function ParentDashboard({
 
   const mine = memberships.find((m) => m.student_name === studentName) ?? memberships[0];
   const myClass = mine ? classes.find((c) => c.id === mine.class_id) : undefined;
+
+  const [week, setWeek] = useState<RankRow[] | null>(null);
+  const [month, setMonth] = useState<RankRow[] | null>(null);
+  const wr = weekRange();
+  const mr = monthRange();
+
+  // Haftanın ve ayın sıralaması (cihaz tarihine göre)
+  useEffect(() => {
+    if (!mine) return;
+    const supabase = createClient();
+    const load = async (from: string, to: string) => {
+      const { data, error } = await supabase.rpc("class_leaderboard", { p_class: mine.class_id, p_from: from, p_to: to });
+      if (error) setError(trError(error));
+      return ((data ?? []) as RankRow[]).map((r) => ({ ...r, book_count: Number(r.book_count), page_count: Number(r.page_count) }));
+    };
+    load(wr.from, wr.to).then(setWeek);
+    load(mr.from, mr.to).then(setMonth);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mine?.class_id]);
 
   const filtered = useMemo(() => {
     const s = q.trim().toLocaleLowerCase("tr");
@@ -72,21 +95,39 @@ export function ParentDashboard({
       {error && <Alert>{error}</Alert>}
 
       {mine ? (
-        <section className="card overflow-hidden">
-          <div className="bg-gradient-to-r from-brand-600 to-brand-500 p-5 text-white">
-            <p className="text-sm font-semibold opacity-90">Sınıfınız</p>
-            <p className="mt-1 text-3xl font-extrabold">{myClass?.name ?? "—"}</p>
-            <p className="mt-1 text-sm opacity-90">Öğretmen: {myClass?.teacher?.full_name || "—"}</p>
+        <>
+          <section className="card overflow-hidden">
+            <div className="bg-gradient-to-r from-brand-600 to-brand-500 p-5 text-white">
+              <p className="text-sm font-semibold opacity-90">Sınıfınız</p>
+              <p className="mt-1 text-3xl font-extrabold">{myClass?.name ?? "—"}</p>
+              <p className="mt-1 text-sm opacity-90">Öğretmen: {myClass?.teacher?.full_name || "—"}</p>
+            </div>
+            <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
+              <Link href={`/sinif/${mine.class_id}?sekme=kitap&alt=giris`} className="btn-primary">
+                📚 Kitap Takip — okuduğu kitabı gir
+              </Link>
+              <button className="btn-ghost text-sm text-slate-500" onClick={leave} disabled={busy === "leave"}>
+                Sınıf değiştir / ayrıl
+              </button>
+            </div>
+          </section>
+
+          <div className="grid gap-4 lg:grid-cols-2">
+            <ChampionCard
+              title="Haftanın okuru"
+              period={`${fmtDate(wr.from)} – ${fmtDate(wr.to)}`}
+              rows={week}
+              emptyText="Bu hafta henüz onaylı kitap kaydı yok."
+            />
+            <ChampionCard
+              title="Ayın okuru"
+              period={monthName()}
+              rows={month}
+              emptyText="Bu ay henüz onaylı kitap kaydı yok."
+            />
           </div>
-          <div className="flex flex-col gap-3 p-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-sm text-slate-600">
-              <b>{mine.student_name}</b> bu sınıfa kayıtlı. Öğretmeninizle eşleştiniz ✔
-            </p>
-            <button className="btn-outline text-sm" onClick={leave} disabled={busy === "leave"}>
-              Sınıf değiştir / ayrıl
-            </button>
-          </div>
-        </section>
+          <p className="text-xs text-slate-500">Sıralama kitap sayısına göre; eşitlikte toplam sayfa sayısı belirler. Sadece öğretmen onaylı kayıtlar sayılır.</p>
+        </>
       ) : (
         <section className="space-y-4">
           <div className="card p-5">

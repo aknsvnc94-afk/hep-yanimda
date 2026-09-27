@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/Alert";
@@ -359,6 +360,7 @@ function ClassesTab({
                     {c.class_members.length} öğrenci
                   </p>
                 </button>
+                <Link href={`/sinif/${c.id}?sekme=kitap`} className="btn-outline px-3 py-2 text-sm">Sınıfa gir</Link>
                 <button
                   className="btn-danger px-3 py-2 text-sm"
                   onClick={() =>

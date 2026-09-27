@@ -94,5 +94,17 @@ supabase/schema.sql        tablolar + tetikleyiciler + RLS
 supabase/email-templates/  Türkçe kod mailleri
 ```
 
-## Sonraki bölüm (kitap takibi) için hazır zemin
-Öğretmen–veli–öğrenci eşleşmesi `class_members` tablosunda. Kitap takibi bu tabloya bağlanacak.
+## Bölüm 2 — Kitap takip
+Kurulum: Supabase **SQL Editor**'de `supabase/02-kitap-takip.sql` dosyasını bir kez çalıştırın.
+
+Sınıf sayfası (`/sinif/[id]`) → **📚 Kitap Takip** sekmesi:
+| Alt sekme | Öğretmen / Admin | Veli |
+|---|---|---|
+| Kitap Ekleme | Ekler, **düzenler, siler** | Sadece ekler (ad + sayfa sayısı) |
+| Öğrenci Kitap Girişi | Sınıftaki tüm öğrencileri seçer; kayıt **direkt onaylı**. Veli kayıtlarını onaylar/reddeder | Sadece kendi öğrencisi; kayıt **öğretmen onayına** düşer |
+| Raporlama | Bu hafta / bu ay / tüm zamanlar / tarih aralığı, sıralama grafiği, öğrenci detayı, CSV indir | — |
+
+- Tarih, kaydı yapan telefon/bilgisayarın tarihidir.
+- Raporlara ve sıralamaya sadece **onaylı** kayıtlar girer.
+- Veli ana ekranı: **Haftanın okuru** (Pzt–Paz) ve **Ayın okuru** — kitap sayısı + toplam sayfa, ilk 5 grafik.
+- Aynı öğrenci aynı kitabı iki kez kaydedemez; okuma kaydı olan kitap silinemez.

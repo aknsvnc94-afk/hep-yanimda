@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Alert } from "@/components/Alert";
@@ -22,11 +23,13 @@ export function TeacherDashboard({
   schoolId,
   name,
   classes,
+  pendingByClass,
 }: {
   teacherId: string;
   schoolId: string;
   name: string;
   classes: TeacherClass[];
+  pendingByClass: Record<string, number>;
 }) {
   const router = useRouter();
   const [newName, setNewName] = useState("");
@@ -49,13 +52,6 @@ export function TeacherDashboard({
   async function deleteClass(c: TeacherClass) {
     if (!confirm(`"${c.name}" sınıfı ve tüm veli eşleşmeleri silinsin mi?`)) return;
     const { error } = await createClient().from("classes").delete().eq("id", c.id);
-    if (error) return setError(trError(error));
-    router.refresh();
-  }
-
-  async function removeMember(id: string, student: string) {
-    if (!confirm(`${student} sınıftan çıkarılsın mı?`)) return;
-    const { error } = await createClient().from("class_members").delete().eq("id", id);
     if (error) return setError(trError(error));
     router.refresh();
   }
@@ -89,38 +85,24 @@ export function TeacherDashboard({
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {classes.map((c) => (
-            <section key={c.id} className="card p-5">
+            <section key={c.id} className="card flex flex-col p-5">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-extrabold">{c.name}</h2>
-                  <p className="text-sm text-slate-500">{c.class_members.length} öğrenci / veli</p>
+                  <h2 className="text-xl font-extrabold">{c.name}</h2>
+                  <p className="text-sm text-slate-500">{c.class_members.length} öğrenci</p>
                 </div>
-                <button className="btn-danger px-3 py-1.5 text-sm" onClick={() => deleteClass(c)}>Sil</button>
+                <button className="btn-ghost px-2 py-1 text-xs text-red-600" onClick={() => deleteClass(c)}>Sınıfı sil</button>
               </div>
-              {c.class_members.length === 0 ? (
-                <p className="mt-4 rounded-xl bg-slate-50 p-3 text-sm text-slate-500">
-                  Henüz katılan veli yok.
-                </p>
-              ) : (
-                <ul className="mt-4 divide-y divide-slate-100">
-                  {[...c.class_members]
-                    .sort((a, b) => a.student_name.localeCompare(b.student_name, "tr"))
-                    .map((m) => (
-                      <li key={m.id} className="flex items-center justify-between gap-3 py-2.5">
-                        <div className="min-w-0">
-                          <p className="font-bold">{m.student_name}</p>
-                          <p className="truncate text-sm text-slate-500">
-                            Veli: {m.parent?.full_name || "—"} · {m.parent?.email}
-                          </p>
-                        </div>
-                        <button className="btn-ghost px-2 py-1 text-xs text-red-600"
-                          onClick={() => removeMember(m.id, m.student_name)}>
-                          Çıkar
-                        </button>
-                      </li>
-                    ))}
-                </ul>
-              )}
+              {pendingByClass[c.id] ? (
+                <Link href={`/sinif/${c.id}?sekme=kitap&alt=giris`}
+                  className="mt-3 rounded-xl bg-amber-50 px-3 py-2 text-sm font-bold text-amber-800 ring-1 ring-amber-200 hover:bg-amber-100">
+                  🔔 {pendingByClass[c.id]} kitap kaydı onayınızı bekliyor
+                </Link>
+              ) : null}
+              <div className="mt-4 grid grid-cols-2 gap-2">
+                <Link href={`/sinif/${c.id}?sekme=ogrenciler`} className="btn-outline text-sm">Öğrenciler</Link>
+                <Link href={`/sinif/${c.id}?sekme=kitap`} className="btn-primary text-sm">📚 Kitap Takip</Link>
+              </div>
             </section>
           ))}
         </div>
