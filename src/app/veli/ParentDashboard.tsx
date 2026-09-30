@@ -1,21 +1,22 @@
 "use client";
+import { ask } from "@/components/ConfirmDialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 import { Alert } from "@/components/Alert";
-import { Avatar, LevelBadge, ProgressRing, SectionTitle } from "@/components/Game";
+import { Avatar, ProgressRing, SectionTitle, TitleCard } from "@/components/Game";
 import { Hero, todayLong } from "@/components/Hero";
 import { EmptyBooks } from "@/components/Illustrations";
 import { ChampionCard } from "@/components/RankingChart";
-import { confetti } from "@/lib/confetti";
 import { fmtDate, monthName, monthRange, weekRange } from "@/lib/dates";
 import { trError } from "@/lib/errors";
-import { HUE_CLASSES, hueFor, MONTHLY_GOAL } from "@/lib/game";
+import { byPages, HUE_CLASSES, hueFor, MONTHLY_GOAL } from "@/lib/game";
 import { STATUS_LABEL, type RankRow, type Reading } from "@/lib/reading-types";
 import { createClient } from "@/lib/supabase/client";
+import { PushToggle } from "@/components/Notifications";
 
 export type SchoolClass = { id: string; name: string; teacher: { full_name: string } | null };
-export type Membership = { id: string; class_id: string; student_name: string };
+export type Membership = { id: string; class_id: string; student_name: string; status?: "pending" | "approved" };
 
 const STATUS_STYLE = {
   pending: "bg-sun-soft text-sun-ink",
@@ -59,12 +60,14 @@ export function ParentDashboard({
 
   // Haftanın ve ayın sıralaması (cihaz tarihine göre)
   useEffect(() => {
-    if (!mine) return;
+    if (!mine || mine.status === "pending") return;
     const supabase = createClient();
     const load = async (from: string, to: string) => {
       const { data, error } = await supabase.rpc("class_leaderboard", { p_class: mine.class_id, p_from: from, p_to: to });
       if (error) setError(trError(error));
-      return ((data ?? []) as RankRow[]).map((r) => ({ ...r, book_count: Number(r.book_count), page_count: Number(r.page_count) }));
+      return ((data ?? []) as RankRow[])
+        .map((r) => ({ ...r, book_count: Number(r.book_count), page_count: Number(r.page_count) }))
+        .sort(byPages);
     };
     load(wr.from, wr.to).then(setWeek);
     load(mr.from, mr.to).then(setMonth);
@@ -80,7 +83,7 @@ export function ParentDashboard({
   }, [q, classes]);
 
   async function join(c: SchoolClass) {
-    if (!confirm(`${studentName}, "${c.name}" sınıfına kaydedilsin mi?`)) return;
+    if (!(await ask({ icon: "🎒", title: "Sınıfa katıl", message: <><b>{studentName}</b> için <b>{c.name}</b> sınıfına katılım isteği gönderilsin mi? Öğretmen onayladıktan sonra kitap kaydedebilirsiniz.</> }))) return;
     setError("");
     setBusy(c.id);
     const { error } = await createClient()
@@ -88,12 +91,11 @@ export function ParentDashboard({
       .insert({ class_id: c.id, parent_id: parentId, student_name: studentName });
     setBusy(null);
     if (error) return setError(trError(error));
-    confetti();
     router.refresh();
   }
 
   async function leave() {
-    if (!mine || !confirm("Sınıf kaydından ayrılmak istediğinize emin misiniz?")) return;
+    if (!mine || !(await ask({ danger: true, message: mine.status === "pending" ? "Katılım isteği iptal edilsin mi?" : "Sınıf kaydından ayrılmak istediğinize emin misiniz?" }))) return;
     setBusy("leave");
     const { error } = await createClient().from("class_members").delete().eq("id", mine.id);
     setBusy(null);
@@ -146,6 +148,28 @@ export function ParentDashboard({
     );
   }
 
+  /* ------------------------- Öğretmen onayı bekleniyor ------------------------- */
+  if (mine.status === "pending") {
+    return (
+      <div className="space-y-6">
+        <Hero title={<>Merhaba{first ? `, ${first}` : ""} 👋</>} subtitle={todayLong()} />
+        {error && <Alert>{error}</Alert>}
+        <section className="card flex flex-col items-center gap-3 p-8 text-center">
+          <span className="grid h-20 w-20 animate-float place-items-center rounded-full bg-sun-soft text-4xl" aria-hidden>⏳</span>
+          <h2 className="text-2xl font-black text-ink">Öğretmen onayı bekleniyor</h2>
+          <p className="max-w-md text-ink-2">
+            <b>{student}</b> için <b>{myClass?.name}</b> sınıfına katılım isteğiniz gönderildi. Öğretmeniniz{" "}
+            <b>{myClass?.teacher?.full_name || ""}</b> onayladığında size bildirim gelecek ve kitap kaydetmeye
+            başlayabileceksiniz.
+          </p>
+          <button className="btn-outline mt-2 text-sm" onClick={leave} disabled={busy === "leave"}>
+            İsteği iptal et / başka sınıf seç
+          </button>
+        </section>
+      </div>
+    );
+  }
+
   /* ------------------------------ Ana ekran ------------------------------ */
   return (
     <div className="space-y-6">
@@ -170,10 +194,20 @@ export function ParentDashboard({
         📖 Okuduğu kitabı kaydet
       </Link>
 
+      <PushToggle userId={parentId} compact />
+
       <div className="grid gap-4 md:grid-cols-2">
         <section className="card p-5">
-          <p className="mb-3 text-sm font-extrabold text-muted">🎖️ Okuma seviyesi</p>
-          <LevelBadge books={approved.length} />
+          <p className="mb-3 text-sm font-extrabold text-muted">🎖️ Bu ayki unvanı</p>
+          {month === null ? (
+            <div className="h-20 animate-pulse rounded-2xl bg-surface-3" />
+          ) : (() => {
+            const idx = month.findIndex((r) => r.student_name === student);
+            const me = idx >= 0 ? month[idx] : null;
+            const fifth = month[4];
+            const toTop5 = idx >= 0 && idx < 5 ? 0 : fifth ? fifth.page_count - (me?.page_count ?? 0) + 1 : 0;
+            return <TitleCard index={idx} pages={me?.page_count ?? 0} books={me?.book_count ?? 0} toTop5={Math.max(0, toTop5)} />;
+          })()}
           <div className="mt-4 grid grid-cols-2 gap-2 text-center">
             <div className="rounded-2xl bg-surface-2 p-2.5">
               <p className="text-xl font-black tabular-nums text-ink">{approved.length}</p>
@@ -217,7 +251,7 @@ export function ParentDashboard({
           emptyText="Bu ay henüz onaylı kitap yok." />
       </div>
       <p className="-mt-3 text-xs text-muted">
-        Sıralama kitap sayısına göre yapılır; eşitlikte toplam sayfa belirler. Sadece öğretmen onaylı kayıtlar sayılır.
+        Sıralama toplam sayfa sayısına göre yapılır; eşitlikte kitap sayısı belirler. İlk 5 öğrenci özel unvan alır. Sadece öğretmen onaylı kayıtlar sayılır.
       </p>
 
       <section>

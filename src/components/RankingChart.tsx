@@ -2,15 +2,15 @@
 import { useEffect } from "react";
 import { confetti } from "@/lib/confetti";
 import type { RankRow } from "@/lib/reading-types";
-import { Avatar } from "./Game";
+import { Avatar, RankChip } from "./Game";
 import { Trophy } from "./Illustrations";
 
 const MEDAL = ["🥇", "🥈", "🥉"];
 
-/** Yatay çubuk sıralama: çubuk uzunluğu = kitap sayısı, yanında sayfa. */
+/** Yatay çubuk sıralama: çubuk uzunluğu = toplam sayfa, yanında kitap sayısı. İlk 5 unvan alır. */
 export function RankingChart({ rows, limit, highlight, offset = 0 }: { rows: RankRow[]; limit?: number; highlight?: string; offset?: number }) {
   const list = limit ? rows.slice(0, limit) : rows;
-  const max = Math.max(1, ...list.map((r) => r.book_count));
+  const max = Math.max(1, ...list.map((r) => r.page_count));
   return (
     <ol className="space-y-2">
       {list.map((r, i) => {
@@ -18,22 +18,25 @@ export function RankingChart({ rows, limit, highlight, offset = 0 }: { rows: Ran
         return (
           <li
             key={r.student_name}
-            className={`group grid grid-cols-[1.75rem_minmax(0,7rem)_1fr] items-center gap-2 rounded-xl px-1.5 py-1 text-sm sm:grid-cols-[1.75rem_minmax(0,10rem)_1fr] ${
+            className={`group grid grid-cols-[1.75rem_minmax(0,8rem)_1fr] items-center gap-2 rounded-xl px-1.5 py-1.5 text-sm sm:grid-cols-[1.75rem_minmax(0,11rem)_1fr] ${
               me ? "bg-primary-soft" : "hover:bg-surface-2"
             }`}
             title={`${r.student_name}: ${r.book_count} kitap, ${r.page_count} sayfa`}
           >
             <span className="text-center text-base font-black tabular-nums text-muted">{MEDAL[i + offset] ?? i + offset + 1}</span>
-            <span className={`truncate font-extrabold ${me ? "text-primary-ink" : "text-ink"}`}>{r.student_name}</span>
+            <span className="flex min-w-0 flex-col items-start gap-0.5">
+              <span className={`w-full truncate font-extrabold ${me ? "text-primary-ink" : "text-ink"}`}>{r.student_name}</span>
+              <span className="origin-left scale-90"><RankChip index={i + offset} /></span>
+            </span>
             <div className="flex min-w-0 items-center gap-2">
               <div className="h-4 min-w-0 flex-1 overflow-hidden rounded-full bg-surface-3">
                 <div
                   className={`h-4 rounded-full ${i + offset === 0 ? "bg-gradient-to-r from-primary to-[#a58bff]" : "bg-primary/55"}`}
-                  style={{ width: `${Math.max(6, (r.book_count / max) * 100)}%`, transition: "width .6s ease" }}
+                  style={{ width: `${Math.max(6, (r.page_count / max) * 100)}%`, transition: "width .6s ease" }}
                 />
               </div>
               <span className="shrink-0 whitespace-nowrap text-xs tabular-nums text-ink-2">
-                <b className="text-ink">{r.book_count}</b> kitap · {r.page_count.toLocaleString("tr-TR")} sf
+                <b className="text-ink">{r.page_count.toLocaleString("tr-TR")}</b> sf · {r.book_count} kitap
               </span>
             </div>
           </li>
@@ -62,8 +65,9 @@ export function Podium({ rows, highlight }: { rows: RankRow[]; highlight?: strin
                 {r.student_name}
               </p>
               <p className="text-xs tabular-nums text-ink-2">
-                <b className="text-ink">{r.book_count}</b> kitap · {r.page_count.toLocaleString("tr-TR")} sf
+                <b className="text-ink">{r.page_count.toLocaleString("tr-TR")}</b> sayfa · {r.book_count} kitap
               </p>
+              <span className="mt-1"><RankChip index={places[k] - 1} wrap /></span>
               <div className={`mt-2 grid w-full place-items-start justify-center rounded-t-2xl pt-1.5 text-xl font-black text-white ${colors[k]} ${heights[k]}`}>
                 {places[k]}
               </div>

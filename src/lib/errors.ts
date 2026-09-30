@@ -21,6 +21,8 @@ export function trError(err: unknown): string {
     return "Yeni şifre eskisiyle aynı olamaz.";
   if (code === "over_email_send_rate_limit" || m.includes("rate limit") || m.includes("security purposes"))
     return "Çok sık deneme yapıldı. Lütfen biraz bekleyip tekrar deneyin.";
+  if (m.includes("error sending") && m.includes("email"))
+    return "Mail gönderilemedi. Lütfen birkaç dakika sonra tekrar deneyin.";
   if (m.includes("database error saving new user"))
     return "Kayıt oluşturulamadı. Okul ve öğrenci bilgilerini kontrol edin.";
   if (m.includes("duplicate key") && m.includes("class_members_student_unique"))
@@ -29,12 +31,13 @@ export function trError(err: unknown): string {
     return "Bu isimde bir sınıfınız zaten var.";
   if (m.includes("duplicate key") && m.includes("schools_name_city_unique"))
     return "Bu okul zaten ekli.";
-  if (m.includes("books_class_title_unique")) return "Bu kitap kitaplıkta zaten var.";
+  if (m.includes("books_class_title_unique") || m.includes("books_title_key_unique")) return "Bu kitap kitaplıkta zaten var.";
   if (m.includes("readings_student_book_unique")) return "Bu öğrenci bu kitabı zaten kaydetmiş.";
   if (m.includes("readings_book_id_fkey"))
     return "Bu kitap okuma kayıtlarında kullanıldığı için silinemez.";
   if (m.includes("books_page_count_check")) return "Sayfa sayısı 1 ile 5000 arasında olmalı.";
-  if (m.includes("row-level security")) return "Bu işlem için yetkiniz yok.";
+  if (m.includes("row-level security"))
+    return "Bu işlem için yetkiniz yok. Veliyseniz, öğrencinizin sınıf kaydı henüz öğretmen tarafından onaylanmamış olabilir.";
   if (m.includes("failed to fetch") || m.includes("network"))
     return "Sunucuya ulaşılamadı. İnternet bağlantınızı kontrol edin.";
   return msg || "Beklenmeyen bir hata oluştu.";

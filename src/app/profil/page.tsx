@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/AppShell";
-import { Avatar, LevelBadge } from "@/components/Game";
+import { Avatar } from "@/components/Game";
 import { LogoutButton } from "@/components/LogoutButton";
+import { PushToggle } from "@/components/Notifications";
 import { getCurrentProfile } from "@/lib/auth";
 import { ROLE_LABEL, schoolLabel } from "@/lib/types";
 
@@ -9,13 +10,13 @@ export default async function ProfilePage() {
   const { supabase, profile } = await getCurrentProfile();
   if (!profile) redirect("/giris");
 
-  const [{ data: school }, { count }] = await Promise.all([
+  const [{ data: school }, { data: approvedReadings }] = await Promise.all([
     profile.school_id
       ? supabase.from("schools").select("name,city").eq("id", profile.school_id).maybeSingle()
       : Promise.resolve({ data: null }),
     profile.role === "parent"
-      ? supabase.from("readings").select("id", { count: "exact", head: true }).eq("parent_id", profile.id).eq("status", "approved")
-      : Promise.resolve({ count: null }),
+      ? supabase.from("readings").select("id, book:books(page_count)").eq("parent_id", profile.id).eq("status", "approved")
+      : Promise.resolve({ data: null }),
   ]);
 
   const rows: [string, string][] = [
@@ -34,10 +35,21 @@ export default async function ProfilePage() {
           <span className="chip bg-primary-soft text-primary-ink">{ROLE_LABEL[profile.role]}</span>
         </section>
 
-        {profile.role === "parent" && count !== null && (
-          <section className="card p-5">
-            <p className="mb-3 text-sm font-bold text-muted">{profile.student_name} — okuma seviyesi</p>
-            <LevelBadge books={count ?? 0} />
+        {profile.role === "parent" && approvedReadings && (
+          <section className="card grid grid-cols-2 gap-3 p-5 text-center">
+            <p className="col-span-2 text-left text-sm font-bold text-muted">📚 {profile.student_name} — toplam (onaylı)</p>
+            <div className="rounded-2xl bg-surface-2 p-3">
+              <p className="text-2xl font-black tabular-nums text-ink">
+                {(approvedReadings as unknown as { book: { page_count: number } | null }[])
+                  .reduce((n, r) => n + (r.book?.page_count ?? 0), 0)
+                  .toLocaleString("tr-TR")}
+              </p>
+              <p className="text-xs font-bold text-muted">sayfa</p>
+            </div>
+            <div className="rounded-2xl bg-surface-2 p-3">
+              <p className="text-2xl font-black tabular-nums text-ink">{approvedReadings.length}</p>
+              <p className="text-xs font-bold text-muted">kitap</p>
+            </div>
           </section>
         )}
 
@@ -49,6 +61,8 @@ export default async function ProfilePage() {
             </div>
           ))}
         </section>
+
+        <PushToggle userId={profile.id} />
 
         <section className="card space-y-2 p-5">
           <h2 className="font-black text-ink">📱 Telefona uygulama olarak ekle</h2>

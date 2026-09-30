@@ -1,7 +1,7 @@
 "use client";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AuthShell } from "@/components/AuthShell";
 import { Alert } from "@/components/Alert";
 import { CodeInput } from "@/components/CodeInput";
@@ -18,6 +18,22 @@ export default function ForgotPasswordPage() {
   const [pw2, setPw2] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+  const [info, setInfo] = useState("");
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setTimeout(() => setCooldown((c) => c - 1), 1000);
+    return () => clearTimeout(t);
+  }, [cooldown]);
+
+  async function resend() {
+    setError(""); setInfo("");
+    const { error } = await createClient().auth.resetPasswordForEmail(email);
+    if (error) return setError(trError(error));
+    setInfo("Yeni kod gönderildi.");
+    setCooldown(60);
+  }
 
   async function sendCode(e: React.FormEvent) {
     e.preventDefault();
@@ -29,6 +45,7 @@ export default function ForgotPasswordPage() {
     if (error) return setError(trError(error));
     setEmail(mail);
     setStep(2);
+    setCooldown(60);
   }
 
   async function resetPassword(e: React.FormEvent) {
@@ -77,7 +94,7 @@ export default function ForgotPasswordPage() {
       ) : (
         <form onSubmit={resetPassword} className="space-y-4">
           {error && <Alert>{error}</Alert>}
-          <Alert kind="info">Bu adres sistemde kayıtlıysa birkaç dakika içinde kod gelecek.</Alert>
+          {info ? <Alert kind="success">{info}</Alert> : <Alert kind="info">Bu adres sistemde kayıtlıysa birkaç dakika içinde kod gelecek. Gereksiz (spam) klasörünü de kontrol edin.</Alert>}
           <div>
             <label className="label">Maile gelen kod</label>
             <CodeInput value={code} onChange={setCode} />
@@ -95,9 +112,14 @@ export default function ForgotPasswordPage() {
           <button className="btn-primary w-full" disabled={loading || code.length < 6}>
             {loading ? "Kaydediliyor…" : "Şifremi yenile"}
           </button>
-          <button type="button" className="btn-ghost w-full" onClick={() => { setStep(1); setCode(""); }}>
-            Farklı mail adresi / kodu tekrar gönder
-          </button>
+          <div className="grid grid-cols-2 gap-2">
+            <button type="button" className="btn-ghost text-sm" onClick={resend} disabled={cooldown > 0}>
+              {cooldown > 0 ? `Tekrar gönder (${cooldown})` : "Kodu tekrar gönder"}
+            </button>
+            <button type="button" className="btn-ghost text-sm" onClick={() => { setStep(1); setCode(""); setInfo(""); }}>
+              Farklı mail adresi
+            </button>
+          </div>
         </form>
       )}
     </AuthShell>

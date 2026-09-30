@@ -1,7 +1,8 @@
 "use client";
 import { useMemo, useState } from "react";
 import { RankingChart } from "@/components/RankingChart";
-import { StatTile } from "@/components/Game";
+import { RankChip, StatTile } from "@/components/Game";
+import { byPages, rankTitle } from "@/lib/game";
 import { fmtDate, monthRange, todayISO, weekRange } from "@/lib/dates";
 import type { Member, RankRow, Reading } from "@/lib/reading-types";
 
@@ -43,9 +44,7 @@ export function ReportTab({
       row.items.push(r);
       map.set(r.student_name, row);
     }
-    return [...map.values()].sort(
-      (a, b) => b.book_count - a.book_count || b.page_count - a.page_count || a.student_name.localeCompare(b.student_name, "tr"),
-    );
+    return [...map.values()].sort(byPages);
   }, [members, approved]);
 
   const totalBooks = approved.length;
@@ -53,8 +52,8 @@ export function ReportTab({
   const readers = rows.filter((r) => r.book_count > 0).length;
 
   function downloadCsv() {
-    const lines = [["Öğrenci", "Kitap sayısı", "Toplam sayfa"].join(";")];
-    rows.forEach((r) => lines.push([r.student_name, r.book_count, r.page_count].join(";")));
+    const lines = [["Sıra", "Öğrenci", "Toplam sayfa", "Kitap sayısı", "Unvan"].join(";")];
+    rows.forEach((r, i) => lines.push([i + 1, r.student_name, r.page_count, r.book_count, r.page_count > 0 ? rankTitle(i)?.name ?? "" : ""].join(";")));
     lines.push("", ["Öğrenci", "Kitap", "Sayfa", "Tarih"].join(";"));
     approved.forEach((r) => lines.push([r.student_name, r.book?.title ?? "", r.book?.page_count ?? 0, fmtDate(r.read_date)].join(";")));
     const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
@@ -107,8 +106,8 @@ export function ReportTab({
 
       {totalBooks > 0 && (
         <div>
-          <h3 className="mb-3 font-black text-ink">🏆 Öğrenci sıralaması</h3>
-          <RankingChart rows={rows.filter((r) => r.book_count > 0)} limit={10} />
+          <h3 className="mb-3 font-black text-ink">🏆 Öğrenci sıralaması <span className="text-sm font-bold text-muted">(sayfa sayısına göre)</span></h3>
+          <RankingChart rows={rows.filter((r) => r.page_count > 0)} limit={10} />
         </div>
       )}
 
@@ -119,13 +118,13 @@ export function ReportTab({
             <thead className="bg-surface-2 text-left text-muted">
               <tr>
                 <th className="px-3 py-2 font-semibold">Öğrenci</th>
-                <th className="px-3 py-2 text-right font-semibold">Kitap</th>
                 <th className="px-3 py-2 text-right font-semibold">Sayfa</th>
+                <th className="px-3 py-2 text-right font-semibold">Kitap</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {rows.map((r) => (
-                <FragmentRow key={r.student_name} row={r} open={open === r.student_name}
+              {rows.map((r, i) => (
+                <FragmentRow key={r.student_name} row={r} index={r.page_count > 0 ? i : -1} open={open === r.student_name}
                   toggle={() => setOpen(open === r.student_name ? null : r.student_name)} />
               ))}
               {rows.length === 0 && (
@@ -139,16 +138,16 @@ export function ReportTab({
   );
 }
 
-function FragmentRow({ row, open, toggle }: { row: RankRow & { items: Reading[] }; open: boolean; toggle: () => void }) {
+function FragmentRow({ row, open, toggle, index }: { row: RankRow & { items: Reading[] }; open: boolean; toggle: () => void; index: number }) {
   return (
     <>
       <tr className={row.book_count ? "cursor-pointer hover:bg-surface-2" : "text-muted"} onClick={row.book_count ? toggle : undefined}>
         <td className="px-3 py-2.5 font-bold">
           {row.book_count > 0 && <span className="mr-1 text-xs text-muted">{open ? "▼" : "▶"}</span>}
-          {row.student_name}
+          {row.student_name} {index >= 0 && <RankChip index={index} />}
         </td>
+        <td className="px-3 py-2.5 text-right font-black tabular-nums">{row.page_count.toLocaleString("tr-TR")}</td>
         <td className="px-3 py-2.5 text-right tabular-nums">{row.book_count}</td>
-        <td className="px-3 py-2.5 text-right tabular-nums">{row.page_count.toLocaleString("tr-TR")}</td>
       </tr>
       {open && (
         <tr>

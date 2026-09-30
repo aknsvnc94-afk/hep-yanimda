@@ -1,4 +1,5 @@
 "use client";
+import { ask } from "@/components/ConfirmDialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
@@ -15,7 +16,7 @@ export type AdminClass = {
   school_id: string;
   created_at: string;
   teacher: { full_name: string; email: string } | null;
-  class_members: { id: string; student_name: string; parent: { full_name: string } | null }[];
+  class_members: { id: string; student_name: string; status?: string; parent: { full_name: string } | null }[];
 };
 
 type Tab = "users" | "schools" | "classes";
@@ -87,6 +88,8 @@ export function AdminDashboard({
       </div>
 
       {error && <Alert>{error}</Alert>}
+
+      <PendingStudents classes={classes} schoolById={schoolById} run={run} />
       {ok && <Alert kind="success">{ok}</Alert>}
 
       {tab === "users" && (
@@ -99,6 +102,45 @@ export function AdminDashboard({
 }
 
 type Run = (p: PromiseLike<{ error: unknown }>, success: string) => Promise<boolean>;
+
+/* ------------------------ ONAY BEKLEYEN ÖĞRENCİLER ------------------------ */
+function PendingStudents({ classes, schoolById, run }: { classes: AdminClass[]; schoolById: Map<string, School>; run: Run }) {
+  const rows = classes.flatMap((c) => c.class_members.filter((m) => m.status === "pending").map((m) => ({ m, c })));
+  if (rows.length === 0) return null;
+  return (
+    <section className="card overflow-hidden ring-2 ring-accent/40">
+      <div className="bg-accent-soft px-4 py-3">
+        <h3 className="font-black text-accent-ink">🔔 Öğretmen onayı bekleyen öğrenciler ({rows.length})</h3>
+        <p className="text-xs text-accent-ink/80">Öğretmen onaylayamıyorsa buradan siz onaylayabilirsiniz.</p>
+      </div>
+      <ul className="divide-y divide-line">
+        {rows.map(({ m, c }) => (
+          <li key={m.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <p className="font-black text-ink">{m.student_name}</p>
+              <p className="truncate text-sm text-muted">
+                {c.name} · {schoolLabel(schoolById.get(c.school_id))} · Öğretmen: {c.teacher?.full_name || "—"} · Veli: {m.parent?.full_name || "—"}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button className="btn-mint px-3 py-1.5 text-sm"
+                onClick={() => run(createClient().from("class_members").update({ status: "approved" }).eq("id", m.id), `${m.student_name} onaylandı.`)}>
+                ✓ Onayla
+              </button>
+              <button className="btn-danger px-3 py-1.5 text-sm"
+                onClick={async () =>
+                  (await ask({ danger: true, message: <><b>{m.student_name}</b> için katılım isteği reddedilsin mi?</> })) &&
+                  run(createClient().from("class_members").delete().eq("id", m.id), "İstek reddedildi.")
+                }>
+                Reddet
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 /* ------------------------------ KULLANICILAR ------------------------------ */
 function UsersTab({
@@ -162,12 +204,14 @@ function UsersTab({
                   className="input w-36 py-2 text-sm"
                   value={u.role}
                   disabled={u.id === me}
-                  onChange={(e) =>
+                  onChange={async (e) => {
+                    const role = e.target.value as Role;
+                    if (!(await ask({ message: <><b>{u.full_name || u.email}</b> kullanıcısının rolü <b>{ROLE_LABEL[role]}</b> olarak değiştirilsin mi?</> }))) return;
                     run(
-                      createClient().from("profiles").update({ role: e.target.value }).eq("id", u.id),
-                      `${u.full_name || u.email} artık ${ROLE_LABEL[e.target.value as Role]}.`,
-                    )
-                  }
+                      createClient().from("profiles").update({ role }).eq("id", u.id),
+                      `${u.full_name || u.email} artık ${ROLE_LABEL[role]}.`,
+                    );
+                  }}
                 >
                   <option value="teacher">Öğretmen</option>
                   <option value="parent">Veli</option>
@@ -176,8 +220,8 @@ function UsersTab({
                 <button
                   className="btn-danger px-3 py-2 text-sm"
                   disabled={u.id === me}
-                  onClick={() =>
-                    confirm(`${u.email} hesabı kalıcı olarak silinsin mi?`) &&
+                  onClick={async () =>
+                    (await ask({ danger: true, message: <><b>{u.email}</b> hesabı kalıcı olarak silinsin mi?</> })) &&
                     run(createClient().rpc("admin_delete_user", { target: u.id }), "Kullanıcı silindi.")
                   }
                 >
@@ -296,10 +340,9 @@ function SchoolsTab({
                         </button>
                         <button
                           className="btn-danger px-3 py-2 text-sm"
-                          onClick={() =>
-                            confirm(
-                              `"${s.name}" silinsin mi? Okuldaki ${c} sınıf da silinir; kullanıcı hesapları kalır.`,
-                            ) && run(createClient().from("schools").delete().eq("id", s.id), "Okul silindi.")
+                          onClick={async () =>
+                            (await ask({ danger: true, message: <>“<b>{s.name}</b>” silinsin mi? Okuldaki {c} sınıf da silinir; kullanıcı hesapları kalır.</> })) &&
+                            run(createClient().from("schools").delete().eq("id", s.id), "Okul silindi.")
                           }
                         >
                           Sil
@@ -360,8 +403,8 @@ function ClassesTab({
                 <Link href={`/sinif/${c.id}?sekme=kitap`} className="btn-outline px-3 py-2 text-sm">Sınıfa gir</Link>
                 <button
                   className="btn-danger px-3 py-2 text-sm"
-                  onClick={() =>
-                    confirm(`"${c.name}" sınıfı silinsin mi?`) &&
+                  onClick={async () =>
+                    (await ask({ danger: true, message: <>“<b>{c.name}</b>” sınıfı ve tüm kayıtları silinsin mi?</> })) &&
                     run(createClient().from("classes").delete().eq("id", c.id), "Sınıf silindi.")
                   }
                 >

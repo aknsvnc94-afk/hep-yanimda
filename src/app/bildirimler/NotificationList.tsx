@@ -1,4 +1,5 @@
 "use client";
+import { ask } from "@/components/ConfirmDialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
@@ -37,7 +38,7 @@ export function NotificationList({ userId, items }: { userId: string; items: Not
   }, [unread, userId]);
 
   async function clearAll() {
-    if (!confirm("Tüm bildirimler silinsin mi?")) return;
+    if (!(await ask({ danger: true, message: "Tüm bildirimler silinsin mi?" }))) return;
     await createClient().from("notifications").delete().eq("user_id", userId);
     router.refresh();
   }

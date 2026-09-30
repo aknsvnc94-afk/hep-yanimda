@@ -12,7 +12,7 @@ export default async function AdminPage() {
     supabase
       .from("classes")
       .select(
-        "id,name,school_id,created_at, teacher:profiles!classes_teacher_id_fkey(full_name,email), class_members(id,student_name, parent:profiles!class_members_parent_id_fkey(full_name))",
+        "id,name,school_id,created_at, teacher:profiles!classes_teacher_id_fkey(full_name,email), class_members(id,student_name,status, parent:profiles!class_members_parent_id_fkey(full_name))",
       )
       .order("name"),
   ]);

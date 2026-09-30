@@ -1,4 +1,5 @@
 "use client";
+import { ask } from "@/components/ConfirmDialog";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -8,12 +9,13 @@ import { Hero, todayLong } from "@/components/Hero";
 import { EmptyBooks } from "@/components/Illustrations";
 import { confetti } from "@/lib/confetti";
 import { createClient } from "@/lib/supabase/client";
+import { PushToggle } from "@/components/Notifications";
 import { trError } from "@/lib/errors";
 import { HUE_CLASSES, hueFor } from "@/lib/game";
 import { monthName } from "@/lib/dates";
 
-export type TeacherClass = { id: string; name: string; created_at: string; class_members: { id: string }[] };
-export type ClassStat = { pending: number; books: number; pages: number; top: { name: string; books: number } | null };
+export type TeacherClass = { id: string; name: string; created_at: string; class_members: { id: string; status?: string }[] };
+export type ClassStat = { pending: number; pendingStudents: number; books: number; pages: number; top: { name: string; pages: number } | null };
 
 export function TeacherDashboard({
   teacherId,
@@ -34,11 +36,14 @@ export function TeacherDashboard({
   const [busy, setBusy] = useState(false);
   const [showForm, setShowForm] = useState(classes.length === 0);
 
-  const totalStudents = classes.reduce((s, c) => s + c.class_members.length, 0);
+  const approvedCount = (c: TeacherClass) => c.class_members.filter((m) => m.status !== "pending").length;
+  const totalStudents = classes.reduce((s, c) => s + approvedCount(c), 0);
   const all = Object.values(stats);
   const monthBooks = all.reduce((s, x) => s + x.books, 0);
   const monthPages = all.reduce((s, x) => s + x.pages, 0);
   const pending = all.reduce((s, x) => s + x.pending, 0);
+  const pendingStudents = all.reduce((s, x) => s + x.pendingStudents, 0);
+  const firstPendingStudentClass = Object.entries(stats).find(([, s]) => s.pendingStudents)?.[0];
 
   async function createClass(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +61,7 @@ export function TeacherDashboard({
   }
 
   async function deleteClass(c: TeacherClass) {
-    if (!confirm(`"${c.name}" sınıfı ve tüm kayıtları silinsin mi? Bu işlem geri alınamaz.`)) return;
+    if (!(await ask({ danger: true, message: <>“<b>{c.name}</b>” sınıfı ve tüm kayıtları silinsin mi? Bu işlem geri alınamaz.</> }))) return;
     const { error } = await createClient().from("classes").delete().eq("id", c.id);
     if (error) return setError(trError(error));
     router.refresh();
@@ -68,20 +73,32 @@ export function TeacherDashboard({
         title={<>Merhaba{name ? `, ${name.split(" ")[0]} Hocam` : ""} 👋</>}
         subtitle={todayLong()}
         right={
-          pending > 0 ? (
-            <Link href={`/sinif/${Object.entries(stats).find(([, s]) => s.pending)?.[0]}?sekme=kitap&alt=giris`}
-              className="btn bg-white text-[#4424cc] shadow-[0_4px_0_0_rgb(0_0_0/0.15)]">
-              🔔 {pending} kayıt onay bekliyor
-            </Link>
+          pending + pendingStudents > 0 ? (
+            <div className="flex flex-col gap-2 sm:items-end">
+              {pendingStudents > 0 && (
+                <Link href={`/sinif/${firstPendingStudentClass}?sekme=ogrenciler`}
+                  className="btn bg-white text-[#4424cc] shadow-[0_4px_0_0_rgb(0_0_0/0.15)]">
+                  🧒 {pendingStudents} öğrenci onay bekliyor
+                </Link>
+              )}
+              {pending > 0 && (
+                <Link href={`/sinif/${Object.entries(stats).find(([, s]) => s.pending)?.[0]}?sekme=kitap&alt=giris`}
+                  className="btn bg-white text-[#4424cc] shadow-[0_4px_0_0_rgb(0_0_0/0.15)]">
+                  📖 {pending} kitap onay bekliyor
+                </Link>
+              )}
+            </div>
           ) : undefined
         }
       />
+
+      <PushToggle userId={teacherId} compact />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatTile icon="🏫" label="Sınıf" value={classes.length} hue="sky" />
         <StatTile icon="🧒" label="Öğrenci" value={totalStudents} hue="mint" />
         <StatTile icon="📚" label={`${monthName()} okunan`} value={monthBooks} hint={`${monthPages.toLocaleString("tr-TR")} sayfa`} hue="primary" />
-        <StatTile icon="🔔" label="Onay bekleyen" value={pending} hue={pending ? "accent" : "sun"} />
+        <StatTile icon="🔔" label="Onay bekleyen" value={pending + pendingStudents} hint={`${pendingStudents} öğrenci · ${pending} kitap`} hue={pending + pendingStudents ? "accent" : "sun"} />
       </div>
 
       {error && <Alert>{error}</Alert>}
@@ -124,7 +141,7 @@ export function TeacherDashboard({
                     <span className="pointer-events-none absolute -right-4 -top-6 text-7xl opacity-20" aria-hidden>📚</span>
                     <p className="text-xs font-extrabold uppercase tracking-wide text-white/80">Sınıf</p>
                     <h3 className="text-3xl font-black">{c.name}</h3>
-                    <p className="text-sm font-bold text-white/90">{c.class_members.length} öğrenci</p>
+                    <p className="text-sm font-bold text-white/90">{approvedCount(c)} öğrenci</p>
                   </div>
                   <div className="flex flex-1 flex-col gap-3 p-4">
                     <div className="grid grid-cols-2 gap-2 text-center">
@@ -143,13 +160,20 @@ export function TeacherDashboard({
                         <p className="min-w-0 flex-1 truncate text-sm text-sun-ink">
                           <b>Ayın okuru:</b> {s.top.name}
                         </p>
-                        <span className="text-sm font-black text-sun-ink">🏆 {s.top.books}</span>
+                        <span className="whitespace-nowrap text-sm font-black text-sun-ink">👑 {s.top.pages.toLocaleString("tr-TR")} sf</span>
                       </div>
                     )}
+                    {s?.pendingStudents ? (
+                      <Link href={`/sinif/${c.id}?sekme=ogrenciler`}
+                        className="flex items-center justify-between rounded-2xl bg-sky-soft px-3 py-2 text-sm font-extrabold text-sky-ink hover:brightness-95">
+                        <span>🧒 {s.pendingStudents} yeni öğrenci onayını bekliyor</span>
+                        <span aria-hidden>→</span>
+                      </Link>
+                    ) : null}
                     {s?.pending ? (
                       <Link href={`/sinif/${c.id}?sekme=kitap&alt=giris`}
                         className="flex items-center justify-between rounded-2xl bg-accent-soft px-3 py-2 text-sm font-extrabold text-accent-ink hover:brightness-95">
-                        <span>🔔 {s.pending} kayıt onayını bekliyor</span>
+                        <span>📖 {s.pending} kitap kaydı onayını bekliyor</span>
                         <span aria-hidden>→</span>
                       </Link>
                     ) : null}

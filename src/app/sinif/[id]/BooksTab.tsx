@@ -1,4 +1,5 @@
 "use client";
+import { ask } from "@/components/ConfirmDialog";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/Alert";
@@ -7,6 +8,7 @@ import { trError } from "@/lib/errors";
 import type { Book, Reading } from "@/lib/reading-types";
 import { HUE_CLASSES, hueFor } from "@/lib/game";
 import { EmptyBooks } from "@/components/Illustrations";
+import { bookKey } from "@/lib/book-key";
 
 export function BooksTab({
   classId,
@@ -36,12 +38,20 @@ export function BooksTab({
     return m;
   }, [readings]);
 
+  const typedKey = bookKey(title);
+  const duplicate = typedKey ? books.find((b) => bookKey(b.title) === typedKey) : undefined;
+  const similar = !duplicate && typedKey.length >= 3
+    ? books.filter((b) => bookKey(b.title).includes(typedKey) || typedKey.includes(bookKey(b.title))).slice(0, 3)
+    : [];
+  const editDuplicate = editId && eTitle ? books.find((b) => b.id !== editId && bookKey(b.title) === bookKey(eTitle)) : undefined;
+
   const list = books.filter((b) => b.title.toLocaleLowerCase("tr").includes(q.trim().toLocaleLowerCase("tr")));
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setOk("");
     const n = parseInt(pages, 10);
+    if (duplicate) return setError(`"${duplicate.title}" kitaplıkta zaten var. Öğrenci Kitap Girişi'nden seçebilirsiniz.`);
     if (!n || n < 1) return setError("Sayfa sayısını doğru girin.");
     setBusy(true);
     const supabase = createClient();
@@ -60,6 +70,7 @@ export function BooksTab({
     setError(""); setOk("");
     const n = parseInt(ePages, 10);
     if (!eTitle.trim() || !n) return setError("Kitap adı ve sayfa sayısı gerekli.");
+    if (editDuplicate) return setError(`"${editDuplicate.title}" adlı bir kitap zaten var.`);
     const { error } = await createClient().from("books").update({ title: eTitle.trim(), page_count: n }).eq("id", b.id);
     if (error) return setError(trError(error));
     setEditId(null);
@@ -68,7 +79,7 @@ export function BooksTab({
   }
 
   async function remove(b: Book) {
-    if (!confirm(`"${b.title}" kitaplıktan silinsin mi?`)) return;
+    if (!(await ask({ danger: true, message: <>“<b>{b.title}</b>” kitaplıktan silinsin mi?</> }))) return;
     setError(""); setOk("");
     const { error } = await createClient().from("books").delete().eq("id", b.id);
     if (error) return setError(trError(error));
@@ -77,18 +88,24 @@ export function BooksTab({
 
   return (
     <div className="space-y-5">
-      <form onSubmit={add} className="grid gap-3 rounded-3xl bg-gradient-to-br from-mint-soft to-surface-2 p-4 ring-1 ring-line sm:grid-cols-[1fr_9rem_auto] sm:items-end sm:p-5">
+      <form onSubmit={add} className="grid gap-3 rounded-3xl bg-gradient-to-br from-mint-soft to-surface-2 p-4 ring-1 ring-line sm:grid-cols-[1fr_9rem_auto] sm:items-start sm:p-5">
         <div>
           <label className="label" htmlFor="btitle">Kitap adı</label>
           <input id="btitle" className="input" required maxLength={150} value={title}
             onChange={(e) => setTitle(e.target.value)} placeholder="Örn. Küçük Prens" />
+          {duplicate && (
+            <p className="mt-1.5 text-xs font-extrabold text-danger-ink">⚠️ “{duplicate.title}” kitaplıkta zaten var.</p>
+          )}
+          {similar.length > 0 && (
+            <p className="mt-1.5 text-xs font-bold text-sun-ink">Benzer: {similar.map((b) => `“${b.title}”`).join(", ")}</p>
+          )}
         </div>
         <div>
           <label className="label" htmlFor="bpages">Sayfa sayısı</label>
           <input id="bpages" className="input" required type="number" inputMode="numeric" min={1} max={5000}
             value={pages} onChange={(e) => setPages(e.target.value)} placeholder="96" />
         </div>
-        <button className="btn-mint" disabled={busy || !title.trim() || !pages}>
+        <button className="btn-mint sm:mt-7" disabled={busy || !title.trim() || !pages || !!duplicate}>
           {busy ? "Kaydediliyor…" : "➕ Kaydet"}
         </button>
       </form>

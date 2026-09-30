@@ -16,7 +16,7 @@ export default async function ParentPage() {
       .order("name"),
     supabase
       .from("class_members")
-      .select("id,class_id,student_name")
+      .select("id,class_id,student_name,status")
       .eq("parent_id", profile.id),
     supabase
       .from("readings")

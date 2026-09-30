@@ -1,28 +1,27 @@
-/** Oyunlaştırma: seviyeler ve hedefler (sadece onaylı kitaplar sayılır). */
+/** Oyunlaştırma: sıralamadaki ilk 5 öğrenciye özel unvanlar (sadece onaylı kitaplar sayılır). */
 
-export type Level = { name: string; emoji: string; min: number };
+export type RankTitle = { name: string; emoji: string };
 
-export const LEVELS: Level[] = [
-  { name: "Yeni Okur", emoji: "🥚", min: 0 },
-  { name: "Kitap Filizi", emoji: "🌱", min: 1 },
-  { name: "Kitap Kurdu", emoji: "🐛", min: 3 },
-  { name: "Kitap Kaşifi", emoji: "🧭", min: 6 },
-  { name: "Kitap Ustası", emoji: "🦉", min: 11 },
-  { name: "Okuma Şampiyonu", emoji: "🏅", min: 21 },
-  { name: "Kitap Efsanesi", emoji: "👑", min: 35 },
+export const RANK_TITLES: RankTitle[] = [
+  { name: "Kitap Efsanesi", emoji: "👑" },
+  { name: "Okuma Şampiyonu", emoji: "🏅" },
+  { name: "Kitap Ustası", emoji: "🦉" },
+  { name: "Kitap Kaşifi", emoji: "🧭" },
+  { name: "Kitap Kurdu", emoji: "🐛" },
 ];
+
+/** 0 tabanlı sıra → unvan (ilk 5 dışında null) */
+export function rankTitle(index: number): RankTitle | null {
+  return RANK_TITLES[index] ?? null;
+}
+
+/** Sıralama kuralı: önce toplam sayfa, eşitse kitap sayısı, sonra isim. */
+export function byPages<T extends { page_count: number; book_count: number; student_name: string }>(a: T, b: T) {
+  return b.page_count - a.page_count || b.book_count - a.book_count || a.student_name.localeCompare(b.student_name, "tr");
+}
 
 /** Aylık kitap hedefi (değiştirmek için bu sayıyı düzenleyin). */
 export const MONTHLY_GOAL = 4;
-
-export function levelFor(books: number) {
-  let i = 0;
-  for (let k = 0; k < LEVELS.length; k++) if (books >= LEVELS[k].min) i = k;
-  const cur = LEVELS[i];
-  const next = LEVELS[i + 1] ?? null;
-  const progress = next ? (books - cur.min) / (next.min - cur.min) : 1;
-  return { ...cur, index: i + 1, next, progress, toNext: next ? next.min - books : 0 };
-}
 
 /** Sınıf/öğrenci için sabit renk (isimden türetilir). */
 const PALETTE = ["primary", "accent", "mint", "sky", "sun"] as const;

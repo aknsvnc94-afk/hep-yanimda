@@ -108,3 +108,17 @@ Sınıf sayfası (`/sinif/[id]`) → **📚 Kitap Takip** sekmesi:
 - Raporlara ve sıralamaya sadece **onaylı** kayıtlar girer.
 - Veli ana ekranı: **Haftanın okuru** (Pzt–Paz) ve **Ayın okuru** — kitap sayısı + toplam sayfa, ilk 5 grafik.
 - Aynı öğrenci aynı kitabı iki kez kaydedemez; okuma kaydı olan kitap silinemez.
+
+## Bölüm 3 — Öğrenci onayı, bildirimler, şifre sıfırlama
+Kurulum: `supabase/03-bildirimler.sql` → sonra gizli `03b-bildirim-ayari.sql` (repoda yok).
+Vercel ortam değişkenleri: `NEXT_PUBLIC_VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `PUSH_WEBHOOK_SECRET`.
+
+- Veli sınıfa katılınca istek **onay bekler**; öğretmen Öğrenciler sekmesinden onaylar/reddeder.
+  Onaylanmayan öğrenci adına kitap kaydı yapılamaz. Eski üyelikler onaylı sayılır.
+- Bildirimler (uygulama içi 🔔 + telefon bildirimi):
+  yeni öğrenci isteği → öğretmen · veli kitap kaydı → öğretmen · kitap onay/ret → veli · sınıf onay/ret → veli.
+- Telefon bildirimi akışı: `notifications` tablosuna kayıt → pg_net ile `/api/push` → Web Push.
+  iPhone'da sadece ana ekrana eklenmiş uygulamada çalışır (iOS 16.4+).
+- Aynı kitap adı engeli: büyük/küçük harf, Türkçe karakter, boşluk ve noktalama farkı yok sayılır
+  (`book_key`). Eski çift kayıtların sonuna (2), (3) eklenir.
+- Şifremi unuttum: Supabase'e SMTP (Resend) tanımlanınca çalışır.

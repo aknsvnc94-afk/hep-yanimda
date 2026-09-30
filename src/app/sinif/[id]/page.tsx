@@ -28,7 +28,7 @@ export default async function ClassPage({
   const [{ data: members }, { data: books }, { data: readings }] = await Promise.all([
     supabase
       .from("class_members")
-      .select("id,student_name,parent_id, parent:profiles!class_members_parent_id_fkey(full_name,email)")
+      .select("id,student_name,parent_id,status, parent:profiles!class_members_parent_id_fkey(full_name,email)")
       .eq("class_id", id)
       .order("student_name"),
     supabase.from("books").select("id,title,page_count,created_by,created_at").eq("class_id", id).order("title"),
@@ -40,7 +40,7 @@ export default async function ClassPage({
       .order("created_at", { ascending: false }),
   ]);
 
-  const myMembers = (members ?? []).filter((m) => m.parent_id === profile.id);
+  const myMembers = (members ?? []).filter((m) => m.parent_id === profile.id && m.status === "approved");
   // Veli ise bu sınıfa kayıtlı olmalı
   if (!isStaff && myMembers.length === 0) redirect("/");
 

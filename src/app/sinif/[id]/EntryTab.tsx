@@ -1,4 +1,5 @@
 "use client";
+import { ask } from "@/components/ConfirmDialog";
 import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
 import { Alert } from "@/components/Alert";
@@ -83,7 +84,7 @@ export function EntryTab({
   }
 
   async function remove(r: Reading) {
-    if (!confirm(`${r.student_name} — "${r.book?.title}" kaydı silinsin mi?`)) return;
+    if (!(await ask({ danger: true, message: <><b>{r.student_name}</b> — “{r.book?.title}” kaydı silinsin mi?</> }))) return;
     setError(""); setOk("");
     const { error } = await createClient().from("readings").delete().eq("id", r.id);
     if (error) return setError(trError(error));

@@ -1,4 +1,4 @@
-import { HUE_CLASSES, hueFor, initials, levelFor, type Hue } from "@/lib/game";
+import { HUE_CLASSES, hueFor, initials, rankTitle, RANK_TITLES, type Hue } from "@/lib/game";
 
 export function Avatar({ name, size = "md", hue }: { name: string; size?: "sm" | "md" | "lg" | "xl"; hue?: Hue }) {
   const h = HUE_CLASSES[hue ?? hueFor(name)];
@@ -65,32 +65,66 @@ export function StatTile({
   );
 }
 
-/** Öğrencinin seviye rozeti + sonraki seviyeye ilerleme */
-export function LevelBadge({ books, compact = false }: { books: number; compact?: boolean }) {
-  const lv = levelFor(books);
-  if (compact) {
-    return (
-      <span className="chip bg-sun-soft text-sun-ink" title={`Seviye ${lv.index}: ${lv.name}`}>
-        {lv.emoji} {lv.name}
-      </span>
-    );
-  }
+const CHIP_STYLE = [
+  "bg-sun-soft text-sun-ink ring-1 ring-sun/50",
+  "bg-sky-soft text-sky-ink",
+  "bg-accent-soft text-accent-ink",
+  "bg-mint-soft text-mint-ink",
+  "bg-primary-soft text-primary-ink",
+];
+
+/** İlk 5 için unvan etiketi (0 tabanlı sıra). İlk 5 dışında hiçbir şey göstermez. */
+export function RankChip({ index, wrap = false }: { index: number; wrap?: boolean }) {
+  const t = rankTitle(index);
+  if (!t) return null;
   return (
-    <div className="flex items-center gap-3">
-      <ProgressRing value={lv.progress} size={72} stroke={8} color="var(--color-sun)">
-        <span className="text-3xl">{lv.emoji}</span>
-      </ProgressRing>
+    <span
+      className={`chip ${wrap ? "justify-center text-center text-[10px] leading-tight" : "whitespace-nowrap"} ${CHIP_STYLE[index]}`}
+      title={`${index + 1}. sıra: ${t.name}`}
+    >
+      {t.emoji} {t.name}
+    </span>
+  );
+}
+
+/** Velinin kendi öğrencisinin bu ayki unvan kartı */
+export function TitleCard({
+  index,
+  pages,
+  books,
+  toTop5,
+}: {
+  index: number; // 0 tabanlı sıra, -1: listede yok
+  pages: number;
+  books: number;
+  toTop5: number; // ilk 5'e girmek için gereken sayfa
+}) {
+  const t = index >= 0 ? rankTitle(index) : null;
+  return (
+    <div className="flex items-center gap-4">
+      <div className={`grid h-20 w-20 shrink-0 place-items-center rounded-3xl text-4xl ${t ? "bg-sun-soft" : "bg-surface-3"}`} aria-hidden>
+        {t ? t.emoji : "🌱"}
+      </div>
       <div className="min-w-0">
-        <p className="text-xs font-bold text-muted">Seviye {lv.index}</p>
-        <p className="text-lg font-black text-ink">{lv.name}</p>
+        {t ? (
+          <>
+            <p className="text-xs font-bold text-muted">Sınıfta {index + 1}. sırada</p>
+            <p className="text-xl font-black text-ink">{t.name}</p>
+          </>
+        ) : (
+          <>
+            <p className="text-xs font-bold text-muted">{books > 0 ? `Sınıfta ${index + 1}. sırada` : "Bu ay henüz onaylı kitap yok"}</p>
+            <p className="text-lg font-black text-ink">İlk 5’e yolculuk 🚀</p>
+          </>
+        )}
         <p className="text-xs text-ink-2">
-          {lv.next ? (
-            <>
-              <b>{lv.next.name}</b> {lv.next.emoji} için <b>{lv.toNext}</b> kitap daha
-            </>
-          ) : (
-            "En yüksek seviyeye ulaştı! 🎉"
-          )}
+          {t
+            ? index > 0
+              ? <>Bir üst unvan için okumaya devam! <b>{RANK_TITLES[index - 1].emoji} {RANK_TITLES[index - 1].name}</b></>
+              : <>Sınıfın zirvesinde! 🎉 <b>{pages.toLocaleString("tr-TR")}</b> sayfa</>
+            : toTop5 > 0
+              ? <><b>{toTop5.toLocaleString("tr-TR")}</b> sayfa daha okursa <b>🐛 Kitap Kurdu</b> unvanını alabilir.</>
+              : <>İlk kitabı kaydedip onaylanınca sıralamaya girer.</>}
         </p>
       </div>
     </div>

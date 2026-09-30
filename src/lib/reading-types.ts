@@ -19,7 +19,7 @@ export type Reading = {
   book: { title: string; page_count: number } | null;
 };
 
-export type Member = { id: string; student_name: string; parent_id: string; parent?: { full_name: string; email: string } | null };
+export type Member = { id: string; student_name: string; parent_id: string; status?: "pending" | "approved"; parent?: { full_name: string; email: string } | null };
 
 export type RankRow = { student_name: string; book_count: number; page_count: number };
 

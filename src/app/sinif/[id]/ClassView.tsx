@@ -33,9 +33,11 @@ export function ClassView(props: {
 }) {
   const { isStaff, readings } = props;
   const pending = readings.filter((r) => r.status === "pending").length;
+  const approvedMembers = props.members.filter((m) => m.status !== "pending");
+  const pendingMembers = props.members.length - approvedMembers.length;
 
   const firstTab: Main = isStaff
-    ? props.initialTab === "ogrenciler" ? "ogrenciler" : "kitap"
+    ? props.initialTab === "ogrenciler" || (props.initialTab !== "kitap" && pendingMembers > 0) ? "ogrenciler" : "kitap"
     : props.initialTab === "sinif" ? "sinif" : "kitap";
   const validSubs: Sub[] = isStaff ? ["kitaplar", "giris", "rapor"] : ["kitaplar", "giris"];
   const firstSub: Sub = validSubs.includes(props.initialSub as Sub)
@@ -47,7 +49,7 @@ export function ClassView(props: {
 
   const mainTabs = isStaff
     ? [
-        { key: "ogrenciler" as Main, label: `Öğrenciler (${props.members.length})`, icon: "🧒" },
+        { key: "ogrenciler" as Main, label: `Öğrenciler (${approvedMembers.length})`, icon: "🧒", badge: pendingMembers },
         { key: "kitap" as Main, label: "Kitap Takip", icon: "📚", badge: pending },
       ]
     : [
@@ -96,13 +98,13 @@ export function ClassView(props: {
               <EntryTab
                 classId={props.classId}
                 isStaff={isStaff}
-                members={props.members}
+                members={approvedMembers}
                 books={props.books}
                 readings={readings}
                 goToBooks={() => { setSub("kitaplar"); setUrl(main, "kitaplar"); }}
               />
             )}
-            {sub === "rapor" && isStaff && <ReportTab className={props.className} members={props.members} readings={readings} />}
+            {sub === "rapor" && isStaff && <ReportTab className={props.className} members={approvedMembers} readings={readings} />}
           </div>
         </section>
       )}
