@@ -51,11 +51,17 @@ export function ReportTab({
   const totalPages = approved.reduce((s, r) => s + (r.book?.page_count ?? 0), 0);
   const readers = rows.filter((r) => r.book_count > 0).length;
 
+  // Excel formül enjeksiyonuna karşı: =, +, -, @ ile başlayan hücreler metin olarak yazılır
+  const cell = (v: string | number) => {
+    const t = String(v).replace(/[;\r\n]+/g, " ");
+    return /^[=+\-@\t]/.test(t) ? `'${t}` : t;
+  };
+
   function downloadCsv() {
     const lines = [["Sıra", "Öğrenci", "Toplam sayfa", "Kitap sayısı", "Unvan"].join(";")];
-    rows.forEach((r, i) => lines.push([i + 1, r.student_name, r.page_count, r.book_count, r.page_count > 0 ? rankTitle(i)?.name ?? "" : ""].join(";")));
+    rows.forEach((r, i) => lines.push([i + 1, r.student_name, r.page_count, r.book_count, r.page_count > 0 ? rankTitle(i)?.name ?? "" : ""].map(cell).join(";")));
     lines.push("", ["Öğrenci", "Kitap", "Sayfa", "Tarih"].join(";"));
-    approved.forEach((r) => lines.push([r.student_name, r.book?.title ?? "", r.book?.page_count ?? 0, fmtDate(r.read_date)].join(";")));
+    approved.forEach((r) => lines.push([r.student_name, r.book?.title ?? "", r.book?.page_count ?? 0, fmtDate(r.read_date)].map(cell).join(";")));
     const blob = new Blob(["﻿" + lines.join("\n")], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob);

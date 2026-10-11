@@ -93,7 +93,7 @@ export function ClassView(props: {
         <section className="card p-4 sm:p-5">
           <Tabs variant="secondary" items={subTabs} value={sub} onChange={(k) => { setSub(k); setUrl(main, k); }} />
           <div className="pt-5">
-            {sub === "kitaplar" && <BooksTab classId={props.classId} isStaff={isStaff} books={props.books} readings={readings} />}
+            {sub === "kitaplar" && <BooksTab classId={props.classId} isStaff={isStaff} books={props.books} readings={readings} members={approvedMembers} />}
             {sub === "giris" && (
               <EntryTab
                 classId={props.classId}

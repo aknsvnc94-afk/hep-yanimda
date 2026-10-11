@@ -89,6 +89,7 @@ export function AdminDashboard({
 
       {error && <Alert>{error}</Alert>}
 
+      <PendingTeachers users={users} schoolById={schoolById} run={run} />
       <PendingStudents classes={classes} schoolById={schoolById} run={run} />
       {ok && <Alert kind="success">{ok}</Alert>}
 
@@ -102,6 +103,45 @@ export function AdminDashboard({
 }
 
 type Run = (p: PromiseLike<{ error: unknown }>, success: string) => Promise<boolean>;
+
+/* ------------------------ ONAY BEKLEYEN ÖĞRETMENLER ------------------------ */
+function PendingTeachers({ users, schoolById, run }: { users: Profile[]; schoolById: Map<string, School>; run: Run }) {
+  const rows = users.filter((u) => u.role === "teacher" && u.approved === false);
+  if (rows.length === 0) return null;
+  return (
+    <section className="card overflow-hidden ring-2 ring-primary/40">
+      <div className="bg-primary-soft px-4 py-3">
+        <h3 className="font-black text-primary-ink">🍎 Onay bekleyen öğretmenler ({rows.length})</h3>
+        <p className="text-xs text-primary-ink/80">Sadece tanıdığınız öğretmenleri onaylayın. Onaylanmayan öğretmen sınıf açamaz.</p>
+      </div>
+      <ul className="divide-y divide-line">
+        {rows.map((u) => (
+          <li key={u.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center">
+            <div className="min-w-0 flex-1">
+              <p className="font-black text-ink">{u.full_name || "(isimsiz)"}</p>
+              <p className="truncate text-sm text-muted">
+                {u.email} · {schoolLabel(u.school_id ? schoolById.get(u.school_id) : null)} · {new Date(u.created_at).toLocaleDateString("tr-TR")}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <button className="btn-mint px-3 py-1.5 text-sm"
+                onClick={() => run(createClient().from("profiles").update({ approved: true }).eq("id", u.id), `${u.full_name || u.email} onaylandı.`)}>
+                ✓ Onayla
+              </button>
+              <button className="btn-danger px-3 py-1.5 text-sm"
+                onClick={async () =>
+                  (await ask({ danger: true, message: <><b>{u.email}</b> öğretmen hesabı reddedilip silinsin mi?</> })) &&
+                  run(createClient().rpc("admin_delete_user", { target: u.id }), "Hesap silindi.")
+                }>
+                Reddet
+              </button>
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
 
 /* ------------------------ ONAY BEKLEYEN ÖĞRENCİLER ------------------------ */
 function PendingStudents({ classes, schoolById, run }: { classes: AdminClass[]; schoolById: Map<string, School>; run: Run }) {
@@ -187,6 +227,11 @@ function UsersTab({
               <div className="min-w-0 flex-1">
                 <p className="font-bold">
                   {u.full_name || "(isimsiz)"}
+                  {u.role === "teacher" && u.approved === false && (
+                    <span className="ml-2 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-bold text-primary-ink">
+                      Onay bekliyor
+                    </span>
+                  )}
                   {!u.confirmed_at && (
                     <span className="ml-2 rounded-full bg-sun-soft px-2 py-0.5 text-xs font-bold text-sun-ink">
                       Mail doğrulanmadı

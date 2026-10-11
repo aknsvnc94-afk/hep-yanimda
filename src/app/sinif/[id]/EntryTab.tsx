@@ -47,7 +47,14 @@ export function EntryTab({
     () => new Set(readings.filter((r) => r.student_name === selectedName && r.status !== "rejected").map((r) => r.book_id)),
     [readings, selectedName],
   );
-  const bookOptions = books.filter((b) => b.title.toLocaleLowerCase("tr").includes(q.trim().toLocaleLowerCase("tr")));
+  // Okunmamışlar önce, en yeni eklenen en üstte; kayıtlılar en altta
+  const bookOptions = books
+    .filter((b) => b.title.toLocaleLowerCase("tr").includes(q.trim().toLocaleLowerCase("tr")))
+    .sort(
+      (a, b) =>
+        Number(alreadyRead.has(a.id)) - Number(alreadyRead.has(b.id)) ||
+        (b.created_at ?? "").localeCompare(a.created_at ?? ""),
+    );
 
   async function save(e: React.FormEvent) {
     e.preventDefault();
@@ -130,18 +137,44 @@ export function EntryTab({
               )}
             </div>
             <div>
-              <label className="label" htmlFor="book">Kitap</label>
-              {books.length > 8 && (
-                <input className="input mb-2" placeholder="Kitap ara…" value={q} onChange={(e) => setQ(e.target.value)} />
-              )}
-              <select id="book" className="input" value={bookId} onChange={(e) => setBookId(e.target.value)} required>
-                <option value="">Kitap seçin</option>
-                {bookOptions.map((b) => (
-                  <option key={b.id} value={b.id} disabled={alreadyRead.has(b.id)}>
-                    {b.title} ({b.page_count} sf){alreadyRead.has(b.id) ? " — kayıtlı" : ""}
-                  </option>
-                ))}
-              </select>
+              <label className="label" htmlFor="book-search">Kitap</label>
+              <input id="book-search" className="input mb-2" placeholder="🔎 Kitap adı yazın…" value={q}
+                onChange={(e) => setQ(e.target.value)} autoComplete="off" />
+              <div role="radiogroup" aria-label="Kitap seçin"
+                className="max-h-72 space-y-1.5 overflow-y-auto rounded-2xl bg-surface p-1.5 ring-1 ring-line">
+                {bookOptions.length === 0 && (
+                  <p className="p-3 text-center text-sm text-muted">
+                    Bu isimde kitap yok.{" "}
+                    <button type="button" className="link" onClick={goToBooks}>Kitap Ekleme</button>’den ekleyebilirsiniz.
+                  </p>
+                )}
+                {bookOptions.map((b) => {
+                  const done = alreadyRead.has(b.id);
+                  const sel = bookId === b.id;
+                  return (
+                    <button
+                      type="button"
+                      role="radio"
+                      aria-checked={sel}
+                      key={b.id}
+                      disabled={done}
+                      onClick={() => setBookId(b.id)}
+                      className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left transition ${
+                        sel ? "bg-primary-soft ring-2 ring-primary" : done ? "opacity-50" : "hover:bg-surface-2"
+                      }`}
+                    >
+                      <span className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border-2 ${sel ? "border-primary bg-primary text-[10px] text-white" : "border-line"}`} aria-hidden>
+                        {sel ? "✓" : ""}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate font-extrabold text-ink">{b.title}</span>
+                        <span className="text-xs text-muted">{b.page_count} sayfa</span>
+                      </span>
+                      {done && <span className="chip bg-mint-soft text-mint-ink">✓ kayıtlı</span>}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
           </div>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

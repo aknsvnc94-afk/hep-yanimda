@@ -5,7 +5,9 @@ import { useMemo, useState } from "react";
 import { Alert } from "@/components/Alert";
 import { createClient } from "@/lib/supabase/client";
 import { trError } from "@/lib/errors";
-import type { Book, Reading } from "@/lib/reading-types";
+import type { Book, Member, Reading } from "@/lib/reading-types";
+import { todayISO } from "@/lib/dates";
+import { confetti } from "@/lib/confetti";
 import { HUE_CLASSES, hueFor } from "@/lib/game";
 import { EmptyBooks } from "@/components/Illustrations";
 import { bookKey } from "@/lib/book-key";
@@ -15,11 +17,13 @@ export function BooksTab({
   isStaff,
   books,
   readings,
+  members = [],
 }: {
   classId: string;
   isStaff: boolean;
   books: Book[];
   readings: Reading[];
+  members?: Member[];
 }) {
   const router = useRouter();
   const [title, setTitle] = useState("");
@@ -28,7 +32,29 @@ export function BooksTab({
   const [error, setError] = useState("");
   const [ok, setOk] = useState("");
   const [busy, setBusy] = useState(false);
+  // Veli kitap ekleyince: "okudu olarak kaydedilsin mi?" sorusu
+  const [offer, setOffer] = useState<{ id: string; title: string } | null>(null);
+  const me = !isStaff ? members[0] : undefined;
+  const alreadyRead = (bookId: string) =>
+    readings.some((r) => r.book_id === bookId && r.status !== "rejected" && r.student_name === me?.student_name);
+
+  async function markRead(book: { id: string; title: string }) {
+    if (!me) return;
+    setError(""); setOk(""); setBusy(true);
+    const { error } = await createClient()
+      .from("readings")
+      .insert({ class_id: classId, member_id: me.id, book_id: book.id, read_date: todayISO() });
+    setBusy(false);
+    setOffer(null);
+    if (error) return setError(trError(error));
+    confetti(80);
+    setOk(`📖 ${me.student_name} — "${book.title}" okundu olarak kaydedildi. Öğretmen onayından sonra raporlara eklenecek.`);
+    router.refresh();
+  }
   const [editId, setEditId] = useState<string | null>(null);
+  const [justAdded, setJustAdded] = useState<string | null>(null);
+  const [sort, setSort] = useState<"new" | "az">("new");
+  const [now] = useState(() => Date.now());
   const [eTitle, setETitle] = useState("");
   const [ePages, setEPages] = useState("");
 
@@ -45,23 +71,43 @@ export function BooksTab({
     : [];
   const editDuplicate = editId && eTitle ? books.find((b) => b.id !== editId && bookKey(b.title) === bookKey(eTitle)) : undefined;
 
-  const list = books.filter((b) => b.title.toLocaleLowerCase("tr").includes(q.trim().toLocaleLowerCase("tr")));
+  // Son eklenen kitaplar en üstte (yeni eklenen kitap listede kaybolmasın)
+  const list = books
+    .filter((b) => b.title.toLocaleLowerCase("tr").includes(q.trim().toLocaleLowerCase("tr")))
+    .sort((a, b) =>
+      sort === "new"
+        ? (b.created_at ?? "").localeCompare(a.created_at ?? "")
+        : a.title.localeCompare(b.title, "tr"),
+    );
+  const isNew = (b: Book) => !!b.created_at && now - new Date(b.created_at).getTime() < 3 * 24 * 3600 * 1000;
 
   async function add(e: React.FormEvent) {
     e.preventDefault();
     setError(""); setOk("");
     const n = parseInt(pages, 10);
-    if (duplicate) return setError(`"${duplicate.title}" kitaplıkta zaten var. Öğrenci Kitap Girişi'nden seçebilirsiniz.`);
+    if (duplicate) {
+      if (me && !alreadyRead(duplicate.id)) {
+        setOffer({ id: duplicate.id, title: duplicate.title });
+        return;
+      }
+      return setError(`"${duplicate.title}" kitaplıkta zaten var.`);
+    }
     if (!n || n < 1) return setError("Sayfa sayısını doğru girin.");
     setBusy(true);
     const supabase = createClient();
     const { data: u } = await supabase.auth.getUser();
-    const { error } = await supabase
+    const { data: created, error } = await supabase
       .from("books")
-      .insert({ class_id: classId, title: title.trim(), page_count: n, created_by: u.user?.id });
+      .insert({ class_id: classId, title: title.trim(), page_count: n, created_by: u.user?.id })
+      .select("id,title")
+      .single();
     setBusy(false);
     if (error) return setError(trError(error));
-    setOk(`"${title.trim()}" kitaplığa eklendi.`);
+    if (me && created) setOffer({ id: created.id, title: created.title });
+    setOk(`"${title.trim()}" kitaplığa eklendi. Listenin en üstünde görebilirsiniz.`);
+    setJustAdded(bookKey(title));
+    setQ("");
+    setSort("new");
     setTitle(""); setPages("");
     router.refresh();
   }
@@ -94,7 +140,14 @@ export function BooksTab({
           <input id="btitle" className="input" required maxLength={150} value={title}
             onChange={(e) => setTitle(e.target.value)} placeholder="Örn. Küçük Prens" />
           {duplicate && (
-            <p className="mt-1.5 text-xs font-extrabold text-danger-ink">⚠️ “{duplicate.title}” kitaplıkta zaten var.</p>
+            <p className="mt-1.5 text-xs font-extrabold text-danger-ink">
+              ⚠️ “{duplicate.title}” kitaplıkta zaten var.
+              {me && !alreadyRead(duplicate.id) && (
+                <button type="button" className="ml-1 underline" onClick={() => setOffer({ id: duplicate.id, title: duplicate.title })}>
+                  Okundu olarak kaydet
+                </button>
+              )}
+            </p>
           )}
           {similar.length > 0 && (
             <p className="mt-1.5 text-xs font-bold text-sun-ink">Benzer: {similar.map((b) => `“${b.title}”`).join(", ")}</p>
@@ -105,19 +158,43 @@ export function BooksTab({
           <input id="bpages" className="input" required type="number" inputMode="numeric" min={1} max={5000}
             value={pages} onChange={(e) => setPages(e.target.value)} placeholder="96" />
         </div>
-        <button className="btn-mint sm:mt-7" disabled={busy || !title.trim() || !pages || !!duplicate}>
+        <button className="btn-mint sm:mt-7" disabled={busy || !title.trim() || (!duplicate && !pages) || (!!duplicate && !me)}>
           {busy ? "Kaydediliyor…" : "➕ Kaydet"}
         </button>
       </form>
 
       {error && <Alert>{error}</Alert>}
       {ok && <Alert kind="success">{ok}</Alert>}
+      {offer && me && (
+        <div className="card animate-pop space-y-3 p-4 ring-2 ring-accent/50">
+          <p className="font-black text-ink">
+            📖 <b>{me.student_name}</b> “{offer.title}” kitabını okudu mu?
+          </p>
+          <p className="text-sm text-ink-2">
+            Kitabı kitaplığa eklemek, okundu olarak kaydetmez. Okuduysa aşağıdan kaydedin; öğretmen onayına gider.
+          </p>
+          <div className="grid gap-2 sm:grid-cols-2">
+            <button className="btn-accent" disabled={busy} onClick={() => markRead(offer)}>
+              {busy ? "Kaydediliyor…" : "Evet, okundu olarak kaydet"}
+            </button>
+            <button className="btn-outline" onClick={() => setOffer(null)}>Hayır, sadece kitaplıkta kalsın</button>
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="font-black text-ink">📚 Sınıf kitaplığı <span className="text-muted">({books.length})</span></h3>
-          {books.length > 5 && (
-            <input className="input sm:w-64" placeholder="Kitap ara…" value={q} onChange={(e) => setQ(e.target.value)} />
+          {books.length > 1 && (
+            <div className="flex gap-2">
+              {books.length > 5 && (
+                <input className="input sm:w-56" placeholder="Kitap ara…" value={q} onChange={(e) => setQ(e.target.value)} />
+              )}
+              <select className="input w-auto" value={sort} onChange={(e) => setSort(e.target.value as "new" | "az")} aria-label="Sıralama">
+                <option value="new">En yeni</option>
+                <option value="az">A → Z</option>
+              </select>
+            </div>
           )}
         </div>
         {books.length === 0 ? (
@@ -131,7 +208,7 @@ export function BooksTab({
               const h = HUE_CLASSES[hueFor(b.title)];
               const n = readCount.get(b.id) ?? 0;
               return (
-                <li key={b.id} className="card flex overflow-hidden">
+                <li key={b.id} className={`card flex overflow-hidden ${justAdded === bookKey(b.title) ? "animate-pop ring-2 ring-mint" : ""}`}>
                   <span className={`w-3 shrink-0 ${h.bg}`} aria-hidden />
                   <div className="flex min-w-0 flex-1 flex-col gap-2 p-3.5">
                     {editId === b.id ? (
@@ -145,6 +222,7 @@ export function BooksTab({
                         <div className="min-w-0">
                           <p className="line-clamp-2 font-black leading-snug text-ink">{b.title}</p>
                           <p className="mt-0.5 text-xs font-bold text-muted">
+                            {isNew(b) && <span className="chip mr-1.5 bg-mint-soft text-mint-ink">Yeni</span>}
                             {b.page_count} sayfa
                             {isStaff && n > 0 && <span className="text-mint-ink"> · {n} öğrenci okudu</span>}
                           </p>

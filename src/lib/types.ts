@@ -10,6 +10,7 @@ export type Profile = {
   school_id: string | null;
   student_name: string | null;
   confirmed_at: string | null;
+  approved?: boolean;
   created_at: string;
 };
 

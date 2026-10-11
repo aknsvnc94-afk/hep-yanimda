@@ -109,6 +109,9 @@ export default function RegisterPage() {
           ))}
         </div>
 
+        {kind === "teacher" && (
+          <Alert kind="info">Öğretmen hesapları, velilerin güvenliği için yönetici onayından sonra aktif olur.</Alert>
+        )}
         {error && <Alert>{error}</Alert>}
 
         <div>

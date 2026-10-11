@@ -6,6 +6,23 @@ import { TeacherDashboard, type ClassStat, type TeacherClass } from "./TeacherDa
 
 export default async function TeacherPage() {
   const { supabase, profile } = await requireRole("teacher");
+
+  // Yönetici onayı bekleyen öğretmen
+  if (profile.approved === false) {
+    return (
+      <AppShell profile={profile}>
+        <section className="card mx-auto flex max-w-lg flex-col items-center gap-3 p-8 text-center">
+          <span className="grid h-20 w-20 animate-float place-items-center rounded-full bg-sun-soft text-4xl" aria-hidden>⏳</span>
+          <h1 className="text-2xl font-black text-ink">Hesabınız onay bekliyor</h1>
+          <p className="text-ink-2">
+            Öğretmen hesapları, velilerin güvenliği için yönetici tarafından onaylanır. Onaylandığında size bildirim
+            gelecek ve sınıf grubunuzu oluşturabileceksiniz.
+          </p>
+          <p className="text-sm text-muted">Bu süreçte sorunuz olursa okul yöneticinizle iletişime geçebilirsiniz.</p>
+        </section>
+      </AppShell>
+    );
+  }
   const now = new Date(new Date().toLocaleString("en-US", { timeZone: "Europe/Istanbul" }));
   const mr = monthRange(now);
 
